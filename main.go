@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -97,7 +99,67 @@ func (f *EndpointRedirect) Serve(w http.ResponseWriter, r *http.Request, localPa
 	http.Redirect(w, r, f.target, http.StatusMovedPermanently)
 }
 
+func readConfig(path string) {
+	var file, err = os.Open(path)
+	defer file.Close()
+	var reader = bufio.NewReader(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var tokens = []string{}
+	var tok = strings.Builder{}
+	for {
+		var r, _, err = reader.ReadRune()
+		if err != nil {
+			if err == io.EOF {
+				if tok.Len() > 0 {
+					tokens = append(tokens, tok.String())
+					tok.Reset()
+				}
+				break
+			} else {
+				log.Fatal(err)
+			}
+		}
+
+		// whitespace ends any token that was being accumulated
+		var whitespace = []rune{' ', '\t', '\n', '\r'}
+		if slices.Contains(whitespace, r) {
+			if tok.Len() > 0 {
+				tokens = append(tokens, tok.String())
+				tok.Reset()
+			}
+			continue
+		}
+
+		// check for special characters
+		var special = []rune{'{', '}', ':'}
+		if slices.Contains(special, r) {
+			if tok.Len() > 0 {
+				tokens = append(tokens, tok.String())
+				tok.Reset()
+			}
+			tok.WriteRune(r)
+			tokens = append(tokens, tok.String())
+			tok.Reset()
+			continue
+		}
+
+		// build normal token
+		tok.WriteRune(r)
+	}
+
+	fmt.Printf("Tokens(%d): [%s]\n", len(tokens), strings.Join(tokens, ", "))
+}
+
 func main() {
+	if len(os.Args) < 2 {
+		log.Fatal("Missing config file argument")
+	}
+	var config_path = os.Args[1]
+	readConfig(config_path)
+
 	var srv = ServerConfig{
 		endpoints: []Endpoint{{
 			location: "/travelize/",
