@@ -111,152 +111,67 @@ func readConfig(path string) *ServerConfig {
 
 	var server = &ServerConfig{}
 
-	var token string
-
 	reader.ReadExactToken("server")
 	reader.ReadExactToken("{")
 	fmt.Println("parse: Server block open")
 	for end := false; !end; {
-		if len(tokens) < 1 {
-			log.Fatal("Unexpected EOF, 'locations' or '}' expected")
-		}
-		var token = tokens[0]
-		tokens = tokens[1:]
+		var token = reader.ReadToken()
 		switch token {
 		case "locations":
-			if len(tokens) < 1 {
-				log.Fatal("Unexpected EOF, '{' expected")
-			}
-			if tokens[0] != "{" {
-				log.Fatalf("Unexpected '%s', '{' expected", tokens[0])
-			}
-			tokens = tokens[1:]
+			reader.ReadExactToken("{")
 			fmt.Println("parse: Locations block open")
 			for {
-				if len(tokens) < 1 {
-					log.Fatal("Unexpected EOF, location path or '}' expected")
-				}
-				if tokens[0] == "}" {
+				var path = reader.ReadToken()
+				if path == "}" {
 					break
 				}
-				var path = tokens[0]
 				var ep = Endpoint{}
-				var special = []string{"{", "}", ":"}
+				var special = []string{"{", "}", ":", EOF}
 				if slices.Contains(special, path) {
-					log.Fatalf("Unexpected '%s', location path expected", path)
+					log.Fatalf("Unexpected %s, location path expected", TokenName(path))
 				}
 				fmt.Printf("parse: Location path='%s'\n", path)
 				ep.location = path
-				tokens = tokens[1:]
-				if len(tokens) < 1 {
-					log.Fatal("Unexpected EOF, ':' expected")
-				}
-				if tokens[0] != ":" {
-					log.Fatalf("Unexpected '%s', ':' expected", tokens[0])
-				}
-				tokens = tokens[1:]
-				if len(tokens) < 1 {
-					log.Fatal("Unexpected EOF, endpoint type expected")
-				}
-				var ep_type = tokens[0]
-				tokens = tokens[1:]
+				reader.ReadExactToken(":")
+				var ep_type = reader.ReadToken()
 				if slices.Contains(special, ep_type) {
-					log.Fatalf("Unexpected '%s', endpoint type expected", ep_type)
+					log.Fatalf("Unexpected %s, endpoint type expected", TokenName(ep_type))
 				}
 				switch ep_type {
 				case "files":
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, '{' expected")
-					}
-					if tokens[0] != "{" {
-						log.Fatalf("Unexpected '%s', '{' expected", tokens[0])
-					}
-					tokens = tokens[1:]
+					reader.ReadExactToken("{")
 					fmt.Println("parse: Files block open")
 
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, 'sources' expected")
-					}
-					if tokens[0] != "sources" {
-						log.Fatalf("Unexpected '%s', 'sources' expected", tokens[0])
-					}
-					tokens = tokens[1:]
-
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, ':' expected")
-					}
-					if tokens[0] != ":" {
-						log.Fatalf("Unexpected '%s', ':' expected", tokens[0])
-					}
-					tokens = tokens[1:]
-
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, path expected")
-					}
-					var files_path = tokens[0]
-					tokens = tokens[1:]
-					if slices.Contains(special, ep_type) {
-						log.Fatalf("Unexpected '%s', path", ep_type)
+					reader.ReadExactToken("sources")
+					reader.ReadExactToken(":")
+					var files_path = reader.ReadToken()
+					if slices.Contains(special, files_path) {
+						log.Fatalf("Unexpected %s, path expected", TokenName(files_path))
 					}
 					fmt.Printf("parse: files sources='%s'\n", files_path)
 					ep.function = &EndpointFiles{
 						fileRoot: files_path,
 					}
 
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, '}' expected")
-					}
-					if tokens[0] != "}" {
-						log.Fatalf("Unexpected '%s', '}' expected", tokens[0])
-					}
-					tokens = tokens[1:]
+					reader.ReadExactToken("}")
 					fmt.Println("parse: Files block close")
 				case "redirect":
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, '{' expected")
-					}
-					if tokens[0] != "{" {
-						log.Fatalf("Unexpected '%s', '{' expected", tokens[0])
-					}
-					tokens = tokens[1:]
+					reader.ReadExactToken("{")
 					fmt.Println("parse: Redirect block open")
 
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, 'target' expected")
-					}
-					if tokens[0] != "target" {
-						log.Fatalf("Unexpected '%s', 'target' expected", tokens[0])
-					}
-					tokens = tokens[1:]
+					reader.ReadExactToken("target")
+					reader.ReadExactToken(":")
 
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, ':' expected")
-					}
-					if tokens[0] != ":" {
-						log.Fatalf("Unexpected '%s', ':' expected", tokens[0])
-					}
-					tokens = tokens[1:]
-
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, path expected")
-					}
-					var target = tokens[0]
-					tokens = tokens[1:]
-					if slices.Contains(special, ep_type) {
-						log.Fatalf("Unexpected '%s', path", ep_type)
+					var target = reader.ReadToken()
+					if slices.Contains(special, target) {
+						log.Fatalf("Unexpected '%s', redirect target expected", TokenName(target))
 					}
 					fmt.Printf("parse: redirect target='%s'\n", target)
 					ep.function = &EndpointRedirect{
 						target: target,
 					}
 
-					if len(tokens) < 1 {
-						log.Fatal("Unexpected EOF, '}' expected")
-					}
-					if tokens[0] != "}" {
-						log.Fatalf("Unexpected '%s', '}' expected", tokens[0])
-					}
-					tokens = tokens[1:]
+					reader.ReadExactToken("}")
 					fmt.Println("parse: Redirect block close")
 				default:
 					log.Fatalf("'%s' is not a recognized endpoint type", ep_type)
@@ -266,9 +181,12 @@ func readConfig(path string) *ServerConfig {
 			fmt.Println("parse: Locations block close")
 		case "}":
 			end = true
+		default:
+			log.Fatalf("Unexpected %s, 'locations' or '}' expected", TokenName(token))
 		}
 	}
 	fmt.Println("parse: Server block close")
+	reader.ReadExactToken(EOF)
 	return server
 }
 

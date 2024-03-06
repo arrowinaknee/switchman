@@ -11,7 +11,7 @@ import (
 
 const EOF = ""
 
-var whitespace = []string{" ", "\t", "\n", "\b"}
+var whitespace = []string{" ", "\t", "\n", "\r"}
 var special = []string{"{", "}", ":"}
 
 type ConfigReader struct {
