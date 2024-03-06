@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -102,70 +101,20 @@ func (f *EndpointRedirect) Serve(w http.ResponseWriter, r *http.Request, localPa
 func readConfig(path string) *ServerConfig {
 	var file, err = os.Open(path)
 	defer file.Close()
-	var reader = bufio.NewReader(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	reader, err := NewConfigReader(file)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var tokens = []string{}
-	var tok = strings.Builder{}
-	for {
-		var r, _, err = reader.ReadRune()
-		if err != nil {
-			if err == io.EOF {
-				if tok.Len() > 0 {
-					tokens = append(tokens, tok.String())
-					tok.Reset()
-				}
-				break
-			} else {
-				log.Fatal(err)
-			}
-		}
-
-		// whitespace ends any token that was being accumulated
-		var whitespace = []rune{' ', '\t', '\n', '\r'}
-		if slices.Contains(whitespace, r) {
-			if tok.Len() > 0 {
-				tokens = append(tokens, tok.String())
-				tok.Reset()
-			}
-			continue
-		}
-
-		// check for special characters
-		var special = []rune{'{', '}', ':'}
-		if slices.Contains(special, r) {
-			if tok.Len() > 0 {
-				tokens = append(tokens, tok.String())
-				tok.Reset()
-			}
-			tok.WriteRune(r)
-			tokens = append(tokens, tok.String())
-			tok.Reset()
-			continue
-		}
-
-		// build normal token
-		tok.WriteRune(r)
-	}
-
 	var server = &ServerConfig{}
 
-	if len(tokens) < 1 {
-		log.Fatal("Unexpected EOF, 'server' expected")
-	}
-	if tokens[0] != "server" {
-		log.Fatalf("Unexpected '%s', 'server' expected", tokens[0])
-	}
-	tokens = tokens[1:]
-	if len(tokens) < 1 {
-		log.Fatal("Unexpected EOF, '{' expected")
-	}
-	if tokens[0] != "{" {
-		log.Fatalf("Unexpected '%s', '{' expected", tokens[0])
-	}
-	tokens = tokens[1:]
+	var token string
+
+	reader.ReadExactToken("server")
+	reader.ReadExactToken("{")
 	fmt.Println("parse: Server block open")
 	for end := false; !end; {
 		if len(tokens) < 1 {
