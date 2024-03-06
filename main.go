@@ -99,7 +99,7 @@ func (f *EndpointRedirect) Serve(w http.ResponseWriter, r *http.Request, localPa
 	http.Redirect(w, r, f.target, http.StatusMovedPermanently)
 }
 
-func readConfig(path string) {
+func readConfig(path string) *ServerConfig {
 	var file, err = os.Open(path)
 	defer file.Close()
 	var reader = bufio.NewReader(file)
@@ -150,7 +150,177 @@ func readConfig(path string) {
 		tok.WriteRune(r)
 	}
 
-	fmt.Printf("Tokens(%d): [%s]\n", len(tokens), strings.Join(tokens, ", "))
+	var server = &ServerConfig{}
+
+	if len(tokens) < 1 {
+		log.Fatal("Unexpected EOF, 'server' expected")
+	}
+	if tokens[0] != "server" {
+		log.Fatalf("Unexpected '%s', 'server' expected", tokens[0])
+	}
+	tokens = tokens[1:]
+	if len(tokens) < 1 {
+		log.Fatal("Unexpected EOF, '{' expected")
+	}
+	if tokens[0] != "{" {
+		log.Fatalf("Unexpected '%s', '{' expected", tokens[0])
+	}
+	tokens = tokens[1:]
+	fmt.Println("parse: Server block open")
+	for end := false; !end; {
+		if len(tokens) < 1 {
+			log.Fatal("Unexpected EOF, 'locations' or '}' expected")
+		}
+		var token = tokens[0]
+		tokens = tokens[1:]
+		switch token {
+		case "locations":
+			if len(tokens) < 1 {
+				log.Fatal("Unexpected EOF, '{' expected")
+			}
+			if tokens[0] != "{" {
+				log.Fatalf("Unexpected '%s', '{' expected", tokens[0])
+			}
+			tokens = tokens[1:]
+			fmt.Println("parse: Locations block open")
+			for {
+				if len(tokens) < 1 {
+					log.Fatal("Unexpected EOF, location path or '}' expected")
+				}
+				if tokens[0] == "}" {
+					break
+				}
+				var path = tokens[0]
+				var ep = Endpoint{}
+				var special = []string{"{", "}", ":"}
+				if slices.Contains(special, path) {
+					log.Fatalf("Unexpected '%s', location path expected", path)
+				}
+				fmt.Printf("parse: Location path='%s'\n", path)
+				ep.location = path
+				tokens = tokens[1:]
+				if len(tokens) < 1 {
+					log.Fatal("Unexpected EOF, ':' expected")
+				}
+				if tokens[0] != ":" {
+					log.Fatalf("Unexpected '%s', ':' expected", tokens[0])
+				}
+				tokens = tokens[1:]
+				if len(tokens) < 1 {
+					log.Fatal("Unexpected EOF, endpoint type expected")
+				}
+				var ep_type = tokens[0]
+				tokens = tokens[1:]
+				if slices.Contains(special, ep_type) {
+					log.Fatalf("Unexpected '%s', endpoint type expected", ep_type)
+				}
+				switch ep_type {
+				case "files":
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, '{' expected")
+					}
+					if tokens[0] != "{" {
+						log.Fatalf("Unexpected '%s', '{' expected", tokens[0])
+					}
+					tokens = tokens[1:]
+					fmt.Println("parse: Files block open")
+
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, 'sources' expected")
+					}
+					if tokens[0] != "sources" {
+						log.Fatalf("Unexpected '%s', 'sources' expected", tokens[0])
+					}
+					tokens = tokens[1:]
+
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, ':' expected")
+					}
+					if tokens[0] != ":" {
+						log.Fatalf("Unexpected '%s', ':' expected", tokens[0])
+					}
+					tokens = tokens[1:]
+
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, path expected")
+					}
+					var files_path = tokens[0]
+					tokens = tokens[1:]
+					if slices.Contains(special, ep_type) {
+						log.Fatalf("Unexpected '%s', path", ep_type)
+					}
+					fmt.Printf("parse: files sources='%s'\n", files_path)
+					ep.function = &EndpointFiles{
+						fileRoot: files_path,
+					}
+
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, '}' expected")
+					}
+					if tokens[0] != "}" {
+						log.Fatalf("Unexpected '%s', '}' expected", tokens[0])
+					}
+					tokens = tokens[1:]
+					fmt.Println("parse: Files block close")
+				case "redirect":
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, '{' expected")
+					}
+					if tokens[0] != "{" {
+						log.Fatalf("Unexpected '%s', '{' expected", tokens[0])
+					}
+					tokens = tokens[1:]
+					fmt.Println("parse: Redirect block open")
+
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, 'target' expected")
+					}
+					if tokens[0] != "target" {
+						log.Fatalf("Unexpected '%s', 'target' expected", tokens[0])
+					}
+					tokens = tokens[1:]
+
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, ':' expected")
+					}
+					if tokens[0] != ":" {
+						log.Fatalf("Unexpected '%s', ':' expected", tokens[0])
+					}
+					tokens = tokens[1:]
+
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, path expected")
+					}
+					var target = tokens[0]
+					tokens = tokens[1:]
+					if slices.Contains(special, ep_type) {
+						log.Fatalf("Unexpected '%s', path", ep_type)
+					}
+					fmt.Printf("parse: redirect target='%s'\n", target)
+					ep.function = &EndpointRedirect{
+						target: target,
+					}
+
+					if len(tokens) < 1 {
+						log.Fatal("Unexpected EOF, '}' expected")
+					}
+					if tokens[0] != "}" {
+						log.Fatalf("Unexpected '%s', '}' expected", tokens[0])
+					}
+					tokens = tokens[1:]
+					fmt.Println("parse: Redirect block close")
+				default:
+					log.Fatalf("'%s' is not a recognized endpoint type", ep_type)
+				}
+				server.endpoints = append(server.endpoints, ep)
+			}
+			fmt.Println("parse: Locations block close")
+		case "}":
+			end = true
+		}
+	}
+	fmt.Println("parse: Server block close")
+	return server
 }
 
 func main() {
@@ -158,26 +328,8 @@ func main() {
 		log.Fatal("Missing config file argument")
 	}
 	var config_path = os.Args[1]
-	readConfig(config_path)
+	var srv = readConfig(config_path)
 
-	var srv = ServerConfig{
-		endpoints: []Endpoint{{
-			location: "/travelize/",
-			function: &EndpointFiles{
-				fileRoot: "...",
-			},
-		}, {
-			location: "/fostifest/",
-			function: &EndpointFiles{
-				fileRoot: "...",
-			},
-		}, {
-			location: "/",
-			function: &EndpointRedirect{
-				target: "fostifest/",
-			},
-		}},
-	}
 	fmt.Println("Switchman web server starting up")
-	log.Fatal(http.ListenAndServe(":8080", &srv))
+	log.Fatal(http.ListenAndServe(":8080", srv))
 }
