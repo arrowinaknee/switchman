@@ -8,16 +8,16 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 )
 
-func respondWithPlaceholder(w http.ResponseWriter, r *http.Request) {
+//lint:ignore U1000 Ignore unused function
+func respondWithPlaceholder(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprint(w, "<h1>Welcome to Switchman</h1> <p>If you see this message, it means that the Switchman web server is running</p>")
 }
 
-func respondWith404(w http.ResponseWriter, r *http.Request) {
+func respondWith404(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusNotFound)
 	fmt.Fprint(w, "<h1>404</h1> <p>The page you requested does not seem to exist</p>")
@@ -104,74 +104,64 @@ func readConfig(path string) *ServerConfig {
 	if err != nil {
 		log.Fatal(err)
 	}
-	reader, err := NewTokenReader(file)
+	tokens, err := NewTokenReader(file)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var server = &ServerConfig{}
 
-	reader.ReadExactToken("server")
-	reader.ReadExactToken("{")
+	tokens.ReadExact("server")
+	tokens.ReadExact("{")
 	fmt.Println("parse: Server block open")
 	for end := false; !end; {
-		var token = reader.ReadToken()
+		var token = tokens.ReadNext()
 		switch token {
 		case "locations":
-			reader.ReadExactToken("{")
+			tokens.ReadExact("{")
 			fmt.Println("parse: Locations block open")
 			for {
-				var path = reader.ReadToken()
+				var path = tokens.ReadNext()
 				if path == "}" {
 					break
 				}
 				var ep = Endpoint{}
-				var special = []string{"{", "}", ":", EOF}
-				if slices.Contains(special, path) {
-					log.Fatalf("Unexpected %s, location path expected", TokenName(path))
+				if !path.IsLiteral() {
+					log.Fatalf("Unexpected %s, location path expected", path.Quote())
 				}
 				fmt.Printf("parse: Location path='%s'\n", path)
-				ep.location = path
-				reader.ReadExactToken(":")
-				var ep_type = reader.ReadToken()
-				if slices.Contains(special, ep_type) {
-					log.Fatalf("Unexpected %s, endpoint type expected", TokenName(ep_type))
-				}
+				ep.location = path.String()
+				tokens.ReadExact(":")
+				var ep_type = tokens.ReadLiteral()
 				switch ep_type {
 				case "files":
-					reader.ReadExactToken("{")
+					tokens.ReadExact("{")
 					fmt.Println("parse: Files block open")
 
-					reader.ReadExactToken("sources")
-					reader.ReadExactToken(":")
-					var files_path = reader.ReadToken()
-					if slices.Contains(special, files_path) {
-						log.Fatalf("Unexpected %s, path expected", TokenName(files_path))
-					}
+					tokens.ReadExact("sources")
+					tokens.ReadExact(":")
+					var files_path = tokens.ReadLiteral()
 					fmt.Printf("parse: files sources='%s'\n", files_path)
 					ep.function = &EndpointFiles{
-						fileRoot: files_path,
+						fileRoot: files_path.String(),
 					}
 
-					reader.ReadExactToken("}")
+					tokens.ReadExact("}")
 					fmt.Println("parse: Files block close")
 				case "redirect":
-					reader.ReadExactToken("{")
+					tokens.ReadExact("{")
 					fmt.Println("parse: Redirect block open")
 
-					reader.ReadExactToken("target")
-					reader.ReadExactToken(":")
+					tokens.ReadExact("target")
+					tokens.ReadExact(":")
 
-					var target = reader.ReadToken()
-					if slices.Contains(special, target) {
-						log.Fatalf("Unexpected '%s', redirect target expected", TokenName(target))
-					}
+					var target = tokens.ReadLiteral()
 					fmt.Printf("parse: redirect target='%s'\n", target)
 					ep.function = &EndpointRedirect{
-						target: target,
+						target: target.String(),
 					}
 
-					reader.ReadExactToken("}")
+					tokens.ReadExact("}")
 					fmt.Println("parse: Redirect block close")
 				default:
 					log.Fatalf("'%s' is not a recognized endpoint type", ep_type)
@@ -182,11 +172,11 @@ func readConfig(path string) *ServerConfig {
 		case "}":
 			end = true
 		default:
-			log.Fatalf("Unexpected %s, 'locations' or '}' expected", TokenName(token))
+			log.Fatalf("Unexpected %s, 'locations' or '}' expected", token.Quote())
 		}
 	}
 	fmt.Println("parse: Server block close")
-	reader.ReadExactToken(EOF)
+	tokens.ReadExact(EOF)
 	return server
 }
 

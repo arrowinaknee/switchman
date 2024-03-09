@@ -9,13 +9,37 @@ import (
 	"strings"
 )
 
-const EOF = ""
+const EOF token = ""
 
-var whitespace = []string{" ", "\t", "\n", "\r"}
-var special = []string{"{", "}", ":"}
+var whitespace = []token{" ", "\t", "\n", "\r"}
+var special = []token{"{", "}", ":"}
 
+// ----------------------------------------
+type token string
+
+func (t token) String() string {
+	return string(t)
+}
+
+func (t token) Quote() string {
+	if t == "" {
+		return "EOF"
+	} else {
+		return fmt.Sprintf("'%s'", t)
+	}
+}
+
+func (t token) IsSpecial() bool {
+	return slices.Contains(special, t)
+}
+
+func (t token) IsLiteral() bool {
+	return t != EOF && !t.IsSpecial()
+}
+
+// ----------------------------------------
 type tokenReader struct {
-	tokens []string
+	tokens []token
 }
 
 func NewTokenReader(r io.Reader) (reader *tokenReader, err error) {
@@ -30,8 +54,8 @@ func NewTokenReader(r io.Reader) (reader *tokenReader, err error) {
 	return
 }
 
-// Reads next token from ConfigReader. If reader reached EOF, returns ""
-func (r *tokenReader) ReadToken() string {
+// Read next token. If reader reached EOF, return ""
+func (r *tokenReader) ReadNext() token {
 	if len(r.tokens) < 1 {
 		return EOF
 	}
@@ -40,14 +64,23 @@ func (r *tokenReader) ReadToken() string {
 	return token
 }
 
-func (r *tokenReader) ReadExactToken(exp string) {
-	var token = r.ReadToken()
+// Read next token and check that it matches exp
+func (r *tokenReader) ReadExact(exp token) {
+	var token = r.ReadNext()
 	if token != exp {
-		log.Fatalf("Unexpected %s, %s expected", TokenName(token), TokenName(exp))
+		log.Fatalf("Unexpected %s, %s expected", token.Quote(), exp.Quote())
 	}
 }
 
-func collectTokens(r io.Reader) (tokens []string, err error) {
+func (r *tokenReader) ReadLiteral() token {
+	var token = r.ReadNext()
+	if !token.IsLiteral() {
+		log.Fatalf("Unexpected %s, a valid name expected", token.Quote())
+	}
+	return token
+}
+
+func collectTokens(r io.Reader) (tokens []token, err error) {
 	var reader = bufio.NewReader(r)
 	var tok strings.Builder
 
@@ -56,7 +89,7 @@ func collectTokens(r io.Reader) (tokens []string, err error) {
 		if err != nil {
 			if err == io.EOF {
 				if tok.Len() > 0 {
-					tokens = append(tokens, tok.String())
+					tokens = append(tokens, token(tok.String()))
 					tok.Reset()
 				}
 				break
@@ -66,22 +99,22 @@ func collectTokens(r io.Reader) (tokens []string, err error) {
 		}
 
 		// whitespace ends any token that was being accumulated
-		if slices.Contains(whitespace, string(r)) {
+		if slices.Contains(whitespace, token(r)) {
 			if tok.Len() > 0 {
-				tokens = append(tokens, tok.String())
+				tokens = append(tokens, token(tok.String()))
 				tok.Reset()
 			}
 			continue
 		}
 
 		// check for special characters
-		if slices.Contains(special, string(r)) {
+		if slices.Contains(special, token(r)) {
 			if tok.Len() > 0 {
-				tokens = append(tokens, tok.String())
+				tokens = append(tokens, token(tok.String()))
 				tok.Reset()
 			}
 			tok.WriteRune(r)
-			tokens = append(tokens, tok.String())
+			tokens = append(tokens, token(tok.String()))
 			tok.Reset()
 			continue
 		}
@@ -91,12 +124,4 @@ func collectTokens(r io.Reader) (tokens []string, err error) {
 	}
 
 	return
-}
-
-func TokenName(t string) string {
-	if t == "" {
-		return "EOF"
-	} else {
-		return fmt.Sprintf("'%s'", t)
-	}
 }
