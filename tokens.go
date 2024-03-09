@@ -72,6 +72,7 @@ func (r *tokenReader) ReadExact(exp token) {
 	}
 }
 
+// Read next token and check that it is a literal (not special or EOF)
 func (r *tokenReader) ReadLiteral() token {
 	var token = r.ReadNext()
 	if !token.IsLiteral() {
@@ -80,11 +81,20 @@ func (r *tokenReader) ReadLiteral() token {
 	return token
 }
 
+// Check that there is a ":" and read next literal token
 func (r *tokenReader) ReadProperty() token {
 	r.ReadExact(":")
 	return r.ReadLiteral()
 }
 
+// Read a structure block, each literal token is passed to parseField function.
+//
+// Example:
+//
+//	{
+//	  field_a [rest processed by parseField]
+//	  field_b [...]
+//	}
 func (r *tokenReader) ReadStruct(parseField func(tokens *tokenReader, field token)) {
 	r.ReadExact("{")
 	for {

@@ -22,6 +22,9 @@ func readConfig(tokens *tokenReader) (server *ServerConfig) {
 }
 
 func readServer(tokens *tokenReader) (server *ServerConfig) {
+	/*server {
+		locations: {...}
+	}*/
 	server = &ServerConfig{}
 
 	tokens.ReadStruct(func(tokens *tokenReader, field token) {
@@ -36,6 +39,10 @@ func readServer(tokens *tokenReader) (server *ServerConfig) {
 }
 
 func readLocations(tokens *tokenReader) (locations []Endpoint) {
+	/*locations{
+		path: endpoint_type {...}
+		...: ...
+	}*/
 	tokens.ReadStruct(func(tokens *tokenReader, field token) {
 		var endpoint Endpoint
 
@@ -56,6 +63,9 @@ func readLocations(tokens *tokenReader) (locations []Endpoint) {
 }
 
 func readEpFiles(tokens *tokenReader) (fun *EndpointFiles) {
+	/*files {
+		sources: path
+	}*/
 	fun = &EndpointFiles{}
 
 	tokens.ReadStruct(func(tokens *tokenReader, field token) {
@@ -70,6 +80,9 @@ func readEpFiles(tokens *tokenReader) (fun *EndpointFiles) {
 }
 
 func readEpRedirect(tokens *tokenReader) (fun *EndpointRedirect) {
+	/*redirect = {
+		target: path
+	}*/
 	fun = &EndpointRedirect{}
 
 	tokens.ReadStruct(func(tokens *tokenReader, field token) {
