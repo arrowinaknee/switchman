@@ -80,6 +80,25 @@ func (r *tokenReader) ReadLiteral() token {
 	return token
 }
 
+func (r *tokenReader) ReadProperty() token {
+	r.ReadExact(":")
+	return r.ReadLiteral()
+}
+
+func (r *tokenReader) ReadStruct(parseField func(tokens *tokenReader, field token)) {
+	r.ReadExact("{")
+	for {
+		var token = r.ReadNext()
+		if token == "}" {
+			break
+		} else if !token.IsLiteral() {
+			log.Fatalf("Unexpected %s, property name or '}' was expected", token.Quote())
+		}
+
+		parseField(r, token)
+	}
+}
+
 func collectTokens(r io.Reader) (tokens []token, err error) {
 	var reader = bufio.NewReader(r)
 	var tok strings.Builder

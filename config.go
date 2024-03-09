@@ -24,92 +24,61 @@ func readConfig(tokens *tokenReader) (server *ServerConfig) {
 func readServer(tokens *tokenReader) (server *ServerConfig) {
 	server = &ServerConfig{}
 
-	tokens.ReadExact("{")
-	for {
-		var token = tokens.ReadNext()
-		if token == "}" {
-			break
-		} else if !token.IsLiteral() {
-			log.Fatalf("Unexpected %s, server property name or '}' expected", token.Quote())
-		}
-		switch token {
+	tokens.ReadStruct(func(tokens *tokenReader, field token) {
+		switch field {
 		case "locations":
 			server.endpoints = readLocations(tokens)
 		default:
-			log.Fatalf("%s is not a valid server property", token.Quote())
+			log.Fatalf("%s is not a valid server property", field.Quote())
 		}
-	}
-
+	})
 	return
 }
 
 func readLocations(tokens *tokenReader) (locations []Endpoint) {
-	tokens.ReadExact("{")
-	for {
-		var token = tokens.ReadNext()
-		if token == "}" {
-			break
-		} else if !token.IsLiteral() {
-			log.Fatalf("Unexpected %s, location path or '}' was expected", token.Quote())
-		}
+	tokens.ReadStruct(func(tokens *tokenReader, field token) {
 		var endpoint Endpoint
-		endpoint.location = token.String()
-		tokens.ReadExact(":")
 
-		var ep_type = tokens.ReadLiteral()
+		endpoint.location = field.String()
+
+		var ep_type = tokens.ReadProperty()
 		switch ep_type {
 		case "files":
 			endpoint.function = readEpFiles(tokens)
 		case "redirect":
 			endpoint.function = readEpRedirect(tokens)
 		default:
-			log.Fatalf("%s is not a valid endpoint type", token.Quote())
+			log.Fatalf("%s is not a valid endpoint type", ep_type.Quote())
 		}
 		locations = append(locations, endpoint)
-	}
+	})
 	return
 }
 
 func readEpFiles(tokens *tokenReader) (fun *EndpointFiles) {
 	fun = &EndpointFiles{}
 
-	tokens.ReadExact("{")
-	for {
-		var token = tokens.ReadNext()
-		if token == "}" {
-			break
-		} else if !token.IsLiteral() {
-			log.Fatalf("Unexpected %s, property name or '}' was expected", token.Quote())
-		}
-		switch token {
+	tokens.ReadStruct(func(tokens *tokenReader, field token) {
+		switch field {
 		case "sources":
-			tokens.ReadExact(":")
-			fun.fileRoot = tokens.ReadLiteral().String()
+			fun.fileRoot = tokens.ReadProperty().String()
 		default:
-			log.Fatalf("%s is not a valid files endpoint property", token.Quote())
+			log.Fatalf("%s is not a valid files endpoint property", field.Quote())
 		}
-	}
+	})
 	return
 }
 
 func readEpRedirect(tokens *tokenReader) (fun *EndpointRedirect) {
 	fun = &EndpointRedirect{}
 
-	tokens.ReadExact("{")
-	for {
-		var token = tokens.ReadNext()
-		if token == "}" {
-			break
-		} else if !token.IsLiteral() {
-			log.Fatalf("Unexpected %s, property name or '}' was expected", token.Quote())
-		}
-		switch token {
+	tokens.ReadStruct(func(tokens *tokenReader, field token) {
+		switch field {
 		case "target":
-			tokens.ReadExact(":")
-			fun.target = tokens.ReadLiteral().String()
+			fun.target = tokens.ReadProperty().String()
 		default:
-			log.Fatalf("%s is not a valid redirect endpoint property", token.Quote())
+			log.Fatalf("%s is not a valid redirect endpoint property", field.Quote())
 		}
-	}
+	})
 	return
 }
