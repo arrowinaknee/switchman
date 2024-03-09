@@ -14,24 +14,24 @@ const EOF = ""
 var whitespace = []string{" ", "\t", "\n", "\r"}
 var special = []string{"{", "}", ":"}
 
-type ConfigReader struct {
+type tokenReader struct {
 	tokens []string
 }
 
-func NewConfigReader(r io.Reader) (reader *ConfigReader, err error) {
+func NewTokenReader(r io.Reader) (reader *tokenReader, err error) {
 	// TODO: collect tokens on the run from ReadToken
 	tokens, err := collectTokens(r)
 	if err != nil {
 		return nil, err
 	}
-	reader = &ConfigReader{
+	reader = &tokenReader{
 		tokens: tokens,
 	}
 	return
 }
 
 // Reads next token from ConfigReader. If reader reached EOF, returns ""
-func (r *ConfigReader) ReadToken() string {
+func (r *tokenReader) ReadToken() string {
 	if len(r.tokens) < 1 {
 		return EOF
 	}
@@ -40,7 +40,7 @@ func (r *ConfigReader) ReadToken() string {
 	return token
 }
 
-func (r *ConfigReader) ReadExactToken(exp string) {
+func (r *tokenReader) ReadExactToken(exp string) {
 	var token = r.ReadToken()
 	if token != exp {
 		log.Fatalf("Unexpected %s, %s expected", TokenName(token), TokenName(exp))

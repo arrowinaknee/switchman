@@ -104,7 +104,7 @@ func readConfig(path string) *ServerConfig {
 	if err != nil {
 		log.Fatal(err)
 	}
-	reader, err := NewConfigReader(file)
+	reader, err := NewTokenReader(file)
 	if err != nil {
 		log.Fatal(err)
 	}
