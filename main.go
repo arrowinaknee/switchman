@@ -108,7 +108,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var srv = ParseServerConfig(config_file)
+	srv, err := ParseServerConfig(config_file)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	fmt.Println("Switchman web server starting up")
 	log.Fatal(http.ListenAndServe(":8080", srv))
