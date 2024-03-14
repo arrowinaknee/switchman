@@ -1,4 +1,4 @@
-package main
+package config
 
 // TODO: separate token.go, token_reader.go, config_reader.go
 
@@ -10,19 +10,19 @@ import (
 	"strings"
 )
 
-const EOF token = ""
+const EOF Token = ""
 
-var whitespace = []token{" ", "\t", "\n", "\r"}
-var special = []token{"{", "}", ":"}
+var whitespace = []Token{" ", "\t", "\n", "\r"}
+var special = []Token{"{", "}", ":"}
 
 // ----------------------------------------
-type token string
+type Token string
 
-func (t token) String() string {
+func (t Token) String() string {
 	return string(t)
 }
 
-func (t token) Quote() string {
+func (t Token) Quote() string {
 	if t == "" {
 		return "EOF"
 	} else {
@@ -30,17 +30,17 @@ func (t token) Quote() string {
 	}
 }
 
-func (t token) IsSpecial() bool {
+func (t Token) IsSpecial() bool {
 	return slices.Contains(special, t)
 }
 
-func (t token) IsLiteral() bool {
+func (t Token) IsLiteral() bool {
 	return t != EOF && !t.IsSpecial()
 }
 
 // ----------------------------------------
 type tokenReader struct {
-	tokens []token
+	tokens []Token
 	err    error
 }
 
@@ -51,7 +51,7 @@ func newTokenReader(r io.Reader) (reader *tokenReader) {
 	return
 }
 
-func (r *tokenReader) next() (t token, err error) {
+func (r *tokenReader) next() (t Token, err error) {
 	if r.err != nil {
 		err = r.err
 		r.err = nil
@@ -65,7 +65,7 @@ func (r *tokenReader) next() (t token, err error) {
 	return
 }
 
-func collectTokens(r io.Reader) (tokens []token, err error) {
+func collectTokens(r io.Reader) (tokens []Token, err error) {
 	var reader = bufio.NewReader(r)
 	var tok strings.Builder
 
@@ -74,7 +74,7 @@ func collectTokens(r io.Reader) (tokens []token, err error) {
 		if err != nil {
 			if err == io.EOF {
 				if tok.Len() > 0 {
-					tokens = append(tokens, token(tok.String()))
+					tokens = append(tokens, Token(tok.String()))
 					tok.Reset()
 				}
 				break
@@ -84,22 +84,22 @@ func collectTokens(r io.Reader) (tokens []token, err error) {
 		}
 
 		// whitespace ends any token that was being accumulated
-		if slices.Contains(whitespace, token(r)) {
+		if slices.Contains(whitespace, Token(r)) {
 			if tok.Len() > 0 {
-				tokens = append(tokens, token(tok.String()))
+				tokens = append(tokens, Token(tok.String()))
 				tok.Reset()
 			}
 			continue
 		}
 
 		// check for special characters
-		if slices.Contains(special, token(r)) {
+		if slices.Contains(special, Token(r)) {
 			if tok.Len() > 0 {
-				tokens = append(tokens, token(tok.String()))
+				tokens = append(tokens, Token(tok.String()))
 				tok.Reset()
 			}
 			tok.WriteRune(r)
-			tokens = append(tokens, token(tok.String()))
+			tokens = append(tokens, Token(tok.String()))
 			tok.Reset()
 			continue
 		}
@@ -112,47 +112,47 @@ func collectTokens(r io.Reader) (tokens []token, err error) {
 }
 
 // ----------------------------------------
-type ConfigReader struct {
+type Reader struct {
 	tokens *tokenReader
 }
 
-func NewConfigReader(r io.Reader) *ConfigReader {
-	return &ConfigReader{newTokenReader(r)}
+func NewReader(r io.Reader) *Reader {
+	return &Reader{newTokenReader(r)}
 }
 
 // Read next token. If reader reached EOF, return ""
-func (r *ConfigReader) ReadNext() (token, error) {
+func (r *Reader) ReadNext() (Token, error) {
 	return r.tokens.next()
 }
 
 // Read next token and check that it matches exp
-func (r *ConfigReader) ReadExact(exp token) error {
+func (r *Reader) ReadExact(exp Token) error {
 	var token, err = r.ReadNext()
 	if err != nil {
 		return err
 	}
 	if token != exp {
-		return errUnexpectedToken(token, exp.Quote())
+		return ErrUnexpectedToken(token, exp.Quote())
 	}
 	return nil
 }
 
 // Read next token and check that it is a literal (not special or EOF)
-func (r *ConfigReader) ReadLiteral() (t token, err error) {
+func (r *Reader) ReadLiteral() (t Token, err error) {
 	t, err = r.ReadNext()
 	if err != nil {
 		return
 	}
 	if !t.IsLiteral() {
 		t = EOF
-		err = errUnexpectedToken(t, "a valid name")
+		err = ErrUnexpectedToken(t, "a valid name")
 		return
 	}
 	return
 }
 
 // Check that there is a ":" and read next literal token
-func (r *ConfigReader) ReadProperty() (t token, err error) {
+func (r *Reader) ReadProperty() (t Token, err error) {
 	if err = r.ReadExact(":"); err != nil {
 		return
 	}
@@ -160,8 +160,8 @@ func (r *ConfigReader) ReadProperty() (t token, err error) {
 }
 
 // Same as ReadProperty(), but gets the token string
-func (r *ConfigReader) ReadPropertyName() (s string, err error) {
-	var t token
+func (r *Reader) ReadPropertyName() (s string, err error) {
+	var t Token
 	t, err = r.ReadProperty()
 	if err != nil {
 		return
@@ -178,12 +178,12 @@ func (r *ConfigReader) ReadPropertyName() (s string, err error) {
 //	  field_a [rest processed by parseField]
 //	  field_b [...]
 //	}
-func (r *ConfigReader) ReadStruct(parseField func(tokens *ConfigReader, field token) error) (err error) {
+func (r *Reader) ReadStruct(parseField func(tokens *Reader, field Token) error) (err error) {
 	if err = r.ReadExact("{"); err != nil {
 		return
 	}
 	for {
-		var token token
+		var token Token
 		token, err = r.ReadNext()
 		if err != nil {
 			return
@@ -191,7 +191,7 @@ func (r *ConfigReader) ReadStruct(parseField func(tokens *ConfigReader, field to
 		if token == "}" {
 			break
 		} else if !token.IsLiteral() {
-			return errUnexpectedToken(token, "property name or '}'")
+			return ErrUnexpectedToken(token, "property name or '}'")
 		}
 
 		err = parseField(r, token)
@@ -202,9 +202,9 @@ func (r *ConfigReader) ReadStruct(parseField func(tokens *ConfigReader, field to
 	return
 }
 
-func errUnexpectedToken(t token, expect string) error {
+func ErrUnexpectedToken(t Token, expect string) error {
 	return fmt.Errorf("unexpected %s, %s was expected", t.Quote(), expect)
 }
-func errUnrecognized(t token, exp string) error {
+func ErrUnrecognized(t Token, exp string) error {
 	return fmt.Errorf("%s is not a recognized%s", t.Quote(), exp)
 }

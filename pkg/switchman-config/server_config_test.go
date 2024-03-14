@@ -1,16 +1,18 @@
-package main
+package appconfig
 
 import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/arrowinaknee/switchman/pkg/servers/http"
 )
 
 func TestParseServerConfig(t *testing.T) {
 	type testCase struct {
 		name    string
 		source  string
-		result  *ServerConfig
+		result  *http.Server
 		wantErr bool
 	}
 
@@ -28,10 +30,10 @@ func TestParseServerConfig(t *testing.T) {
 					}
 				}
 			}`,
-			result: &ServerConfig{
-				endpoints: []Endpoint{
-					{location: "/test", function: &EndpointFiles{"/test/"}},
-					{location: "/redirect", function: &EndpointRedirect{"/test"}},
+			result: &http.Server{
+				Endpoints: []http.Endpoint{
+					{Location: "/test", Function: &http.EndpointFiles{FileRoot: "/test/"}},
+					{Location: "/redirect", Function: &http.EndpointRedirect{Target: "/test"}},
 				},
 			},
 			wantErr: false,
@@ -60,7 +62,7 @@ func TestParseServerConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseServerConfig(strings.NewReader(tt.source))
+			got, err := ParseServer(strings.NewReader(tt.source))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseServerConfig() error = \"%v\", wantErr %v", err, tt.wantErr)
 				return

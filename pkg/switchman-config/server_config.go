@@ -1,39 +1,42 @@
-package main
+package appconfig
 
 import (
 	"io"
+
+	"github.com/arrowinaknee/switchman/pkg/config"
+	"github.com/arrowinaknee/switchman/pkg/servers/http"
 )
 
-func ParseServerConfig(source io.Reader) (*ServerConfig, error) {
-	return readConfig(NewConfigReader(source))
+func ParseServer(source io.Reader) (*http.Server, error) {
+	return readConfig(config.NewReader(source))
 }
 
-func readConfig(config *ConfigReader) (server *ServerConfig, err error) {
-	if err = config.ReadExact("server"); err != nil {
+func readConfig(conf *config.Reader) (server *http.Server, err error) {
+	if err = conf.ReadExact("server"); err != nil {
 		return
 	}
-	server, err = readServer(config)
+	server, err = readServer(conf)
 	if err != nil {
 		return
 	}
-	if err = config.ReadExact(EOF); err != nil {
+	if err = conf.ReadExact(config.EOF); err != nil {
 		server = nil
 	}
 	return
 }
 
-func readServer(config *ConfigReader) (server *ServerConfig, err error) {
+func readServer(conf *config.Reader) (server *http.Server, err error) {
 	/*server {
 		locations: {...}
 	}*/
-	server = &ServerConfig{}
+	server = &http.Server{}
 
-	err = config.ReadStruct(func(config *ConfigReader, field token) (err error) {
+	err = conf.ReadStruct(func(conf *config.Reader, field config.Token) (err error) {
 		switch field {
 		case "locations":
-			server.endpoints, err = readLocations(config)
+			server.Endpoints, err = readLocations(conf)
 		default:
-			err = errUnrecognized(field, "recognized server property")
+			err = config.ErrUnrecognized(field, "recognized server property")
 		}
 		return
 	})
@@ -43,28 +46,28 @@ func readServer(config *ConfigReader) (server *ServerConfig, err error) {
 	return
 }
 
-func readLocations(config *ConfigReader) (locations []Endpoint, err error) {
+func readLocations(conf *config.Reader) (locations []http.Endpoint, err error) {
 	/*locations{
 		path: endpoint_type {...}
 		...: ...
 	}*/
-	err = config.ReadStruct(func(config *ConfigReader, field token) (err error) {
-		var endpoint Endpoint
+	err = conf.ReadStruct(func(conf *config.Reader, field config.Token) (err error) {
+		var endpoint http.Endpoint
 
-		endpoint.location = field.String()
+		endpoint.Location = field.String()
 
-		var ep_type token
-		ep_type, err = config.ReadProperty()
+		var ep_type config.Token
+		ep_type, err = conf.ReadProperty()
 		if err != nil {
 			return
 		}
 		switch ep_type {
 		case "files":
-			endpoint.function, err = readEpFiles(config)
+			endpoint.Function, err = readEpFiles(conf)
 		case "redirect":
-			endpoint.function, err = readEpRedirect(config)
+			endpoint.Function, err = readEpRedirect(conf)
 		default:
-			return errUnrecognized(ep_type, "recognized endpoint type")
+			return config.ErrUnrecognized(ep_type, "recognized endpoint type")
 		}
 		if err != nil {
 			return
@@ -78,36 +81,36 @@ func readLocations(config *ConfigReader) (locations []Endpoint, err error) {
 	return
 }
 
-func readEpFiles(config *ConfigReader) (fun *EndpointFiles, err error) {
+func readEpFiles(conf *config.Reader) (fun *http.EndpointFiles, err error) {
 	/*files {
 		sources: path
 	}*/
-	fun = &EndpointFiles{}
+	fun = &http.EndpointFiles{}
 
-	err = config.ReadStruct(func(config *ConfigReader, field token) (err error) {
+	err = conf.ReadStruct(func(conf *config.Reader, field config.Token) (err error) {
 		switch field {
 		case "sources":
-			fun.fileRoot, err = config.ReadPropertyName()
+			fun.FileRoot, err = conf.ReadPropertyName()
 		default:
-			err = errUnrecognized(field, "recognized files endpoint property")
+			err = config.ErrUnrecognized(field, "recognized files endpoint property")
 		}
 		return
 	})
 	return
 }
 
-func readEpRedirect(config *ConfigReader) (fun *EndpointRedirect, err error) {
+func readEpRedirect(conf *config.Reader) (fun *http.EndpointRedirect, err error) {
 	/*redirect = {
 		target: path
 	}*/
-	fun = &EndpointRedirect{}
+	fun = &http.EndpointRedirect{}
 
-	err = config.ReadStruct(func(config *ConfigReader, field token) (err error) {
+	err = conf.ReadStruct(func(conf *config.Reader, field config.Token) (err error) {
 		switch field {
 		case "target":
-			fun.target, err = config.ReadPropertyName()
+			fun.Target, err = conf.ReadPropertyName()
 		default:
-			err = errUnrecognized(field, "recognized redirect endpoint property")
+			err = config.ErrUnrecognized(field, "recognized redirect endpoint property")
 		}
 		return
 	})
