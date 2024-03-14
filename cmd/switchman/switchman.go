@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	appconfig "github.com/arrowinaknee/switchman/pkg/switchman-config"
+	"github.com/arrowinaknee/switchman/pkg/appconfig"
 )
 
 func main() {
