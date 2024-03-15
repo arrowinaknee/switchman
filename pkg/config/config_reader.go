@@ -6,16 +6,20 @@ import (
 )
 
 type Reader struct {
-	tokens *tokenReader
+	tokens   *tokenReader
+	curToken Token
+	tokenPos TokenPosition
 }
 
 func NewReader(r io.Reader) *Reader {
-	return &Reader{newTokenReader(r)}
+	return &Reader{tokens: newTokenReader(r)}
 }
 
 // Read next token. If reader reached EOF, return ""
 func (r *Reader) ReadNext() (Token, error) {
-	return r.tokens.next()
+	var err error
+	r.curToken, r.tokenPos, err = r.tokens.next()
+	return r.curToken, err
 }
 
 // Read next token and check that it matches exp
@@ -25,7 +29,7 @@ func (r *Reader) ReadExact(exp Token) error {
 		return err
 	}
 	if token != exp {
-		return ErrUnexpectedToken(token, exp.Quote())
+		return r.ErrUnexpectedToken(exp.Quote())
 	}
 	return nil
 }
@@ -38,7 +42,7 @@ func (r *Reader) ReadLiteral() (t Token, err error) {
 	}
 	if !t.IsLiteral() {
 		t = EOF
-		err = ErrUnexpectedToken(t, "a valid name")
+		err = r.ErrUnexpectedToken("a valid name")
 		return
 	}
 	return
@@ -84,7 +88,7 @@ func (r *Reader) ReadStruct(parseField func(tokens *Reader, field Token) error) 
 		if token == "}" {
 			break
 		} else if !token.IsLiteral() {
-			return ErrUnexpectedToken(token, "property name or '}'")
+			return r.ErrUnexpectedToken("property name or '}'")
 		}
 
 		err = parseField(r, token)
@@ -95,9 +99,9 @@ func (r *Reader) ReadStruct(parseField func(tokens *Reader, field Token) error) 
 	return
 }
 
-func ErrUnexpectedToken(t Token, expect string) error {
-	return fmt.Errorf("unexpected %s, %s was expected", t.Quote(), expect)
+func (r *Reader) ErrUnexpectedToken(expect string) error {
+	return fmt.Errorf("%d:%d: %s was expected, got %s", r.tokenPos.Line, r.tokenPos.Col, expect, r.curToken.Quote())
 }
-func ErrUnrecognized(t Token, exp string) error {
-	return fmt.Errorf("%s is not a recognized%s", t.Quote(), exp)
+func (r *Reader) ErrUnrecognized(exp string) error {
+	return fmt.Errorf("%d:%d: %s is not a recognized %s", r.tokenPos.Line, r.tokenPos.Col, r.curToken.Quote(), exp)
 }

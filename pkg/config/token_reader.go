@@ -7,43 +7,87 @@ import (
 	"strings"
 )
 
+type TokenPosition struct {
+	Line int
+	Col  int
+}
+
+func startPosition() *TokenPosition {
+	return &TokenPosition{
+		Line: 1,
+		Col:  0,
+	}
+}
+
+func position(line, col int) *TokenPosition {
+	return &TokenPosition{line, col}
+}
+
+func (t *TokenPosition) nextChar() {
+	t.Col += 1
+}
+
+func (t *TokenPosition) nextLine() {
+	t.Line += 1
+	t.Col = 0
+}
+
 type tokenReader struct {
-	reader *bufio.Reader
-	token  strings.Builder
+	reader   *bufio.Reader
+	token    strings.Builder
+	tokStart TokenPosition
+	curPos   *TokenPosition
 }
 
 func newTokenReader(r io.Reader) (reader *tokenReader) {
 	return &tokenReader{
-		reader: bufio.NewReader(r),
+		reader:   bufio.NewReader(r),
+		tokStart: *startPosition(),
+		curPos:   startPosition(),
 	}
 }
 
-func (r *tokenReader) popToken() (t Token) {
+func (r *tokenReader) popToken() (t Token, p TokenPosition) {
 	t = Token(r.token.String())
 	r.token.Reset()
+	p = r.tokStart
 	return
 }
 
-func (r *tokenReader) next() (t Token, err error) {
+func (r *tokenReader) writeRune(c rune) {
+	if r.token.Len() == 0 {
+		r.tokStart = *r.curPos
+	}
+	r.token.WriteRune(c)
+}
+
+func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 	var whitespace = []rune{' ', '\t', '\n', '\r'}
 
 	for {
 		var c rune
 		c, _, err = r.reader.ReadRune()
+		r.curPos.nextChar()
 		if err != nil {
 			if err == io.EOF {
+				err = nil
 				if r.token.Len() > 0 {
-					t = r.popToken()
-					return t, nil
+					t, p = r.popToken()
+					return
+				} else {
+					t, p = EOF, *r.curPos
 				}
-				return EOF, nil
+				return
 			}
 			return
 		}
 
 		if slices.Contains(whitespace, c) {
+			if c == '\n' {
+				r.curPos.nextLine()
+			}
 			if r.token.Len() > 0 {
-				t = r.popToken()
+				t, p = r.popToken()
 				return
 			}
 			continue
@@ -51,19 +95,19 @@ func (r *tokenReader) next() (t Token, err error) {
 
 		if Token(c).IsSpecial() {
 			if r.token.Len() > 0 {
-				t = r.popToken()
-				r.token.WriteRune(c)
+				t, p = r.popToken()
+				r.writeRune(c)
 			} else {
-				t = Token(c)
+				t, p = Token(c), *r.curPos
 			}
 			return
 		}
 
 		if Token(r.token.String()).IsSpecial() {
-			t = r.popToken()
-			r.token.WriteRune(c)
+			t, p = r.popToken()
+			r.writeRune(c)
 			return
 		}
-		r.token.WriteRune(c)
+		r.writeRune(c)
 	}
 }

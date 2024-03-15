@@ -36,7 +36,7 @@ func readServer(conf *config.Reader) (server *http.Server, err error) {
 		case "locations":
 			server.Endpoints, err = readLocations(conf)
 		default:
-			err = config.ErrUnrecognized(field, "recognized server property")
+			err = conf.ErrUnrecognized("server property")
 		}
 		return
 	})
@@ -67,7 +67,7 @@ func readLocations(conf *config.Reader) (locations []http.Endpoint, err error) {
 		case "redirect":
 			endpoint.Function, err = readEpRedirect(conf)
 		default:
-			return config.ErrUnrecognized(ep_type, "recognized endpoint type")
+			return conf.ErrUnrecognized("endpoint type")
 		}
 		if err != nil {
 			return
@@ -92,7 +92,7 @@ func readEpFiles(conf *config.Reader) (fun *http.EndpointFiles, err error) {
 		case "sources":
 			fun.FileRoot, err = conf.ReadPropertyName()
 		default:
-			err = config.ErrUnrecognized(field, "recognized files endpoint property")
+			err = conf.ErrUnrecognized("files endpoint property")
 		}
 		return
 	})
@@ -110,7 +110,7 @@ func readEpRedirect(conf *config.Reader) (fun *http.EndpointRedirect, err error)
 		case "target":
 			fun.Target, err = conf.ReadPropertyName()
 		default:
-			err = config.ErrUnrecognized(field, "recognized redirect endpoint property")
+			err = conf.ErrUnrecognized("redirect endpoint property")
 		}
 		return
 	})

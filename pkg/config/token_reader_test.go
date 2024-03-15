@@ -33,7 +33,7 @@ func TestTokenReader(t *testing.T) {
 			var tokens []Token
 			var reader = newTokenReader(strings.NewReader(tt.input))
 			for {
-				tok, err := reader.next()
+				tok, _, err := reader.next()
 				if err != nil {
 					t.Errorf("tokenReader.next() error = %v", err)
 					return
@@ -47,5 +47,39 @@ func TestTokenReader(t *testing.T) {
 				t.Errorf("tokenReader.next() tokens = %v, want = %v", tokens, tt.want)
 			}
 		})
+	}
+}
+
+func TestTokenPosition(t *testing.T) {
+	type tokenWithPos struct {
+		t Token
+		p TokenPosition
+	}
+	input := `test {
+case :
+}`
+	want := []tokenWithPos{
+		{"test", *position(1, 1)},
+		{"{", *position(1, 6)},
+		{"case", *position(2, 1)},
+		{":", *position(2, 6)},
+		{"}", *position(3, 1)},
+		{EOF, *position(3, 2)},
+	}
+	var got []tokenWithPos
+	var reader = newTokenReader(strings.NewReader(input))
+	for {
+		tok, pos, err := reader.next()
+		if err != nil {
+			t.Errorf("tokenReader.next() error = %v", err)
+			return
+		}
+		got = append(got, tokenWithPos{tok, pos})
+		if tok == EOF {
+			break
+		}
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("tokenReader.next() tokens = %v, want = %v", got, want)
 	}
 }
