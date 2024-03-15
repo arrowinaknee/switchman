@@ -7,7 +7,6 @@ import (
 
 const EOF Token = ""
 
-var whitespace = []Token{" ", "\t", "\n", "\r"}
 var special = []Token{"{", "}", ":"}
 
 type Token string

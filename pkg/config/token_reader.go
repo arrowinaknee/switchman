@@ -8,73 +8,62 @@ import (
 )
 
 type tokenReader struct {
-	tokens []Token
-	err    error
+	reader *bufio.Reader
+	token  strings.Builder
 }
 
 func newTokenReader(r io.Reader) (reader *tokenReader) {
-	// TODO: collect tokens on the run
-	tokens, err := collectTokens(r)
-	reader = &tokenReader{tokens, err}
+	return &tokenReader{
+		reader: bufio.NewReader(r),
+	}
+}
+
+func (r *tokenReader) popToken() (t Token) {
+	t = Token(r.token.String())
+	r.token.Reset()
 	return
 }
 
 func (r *tokenReader) next() (t Token, err error) {
-	if r.err != nil {
-		err = r.err
-		r.err = nil
-		return
-	}
-	if len(r.tokens) < 1 {
-		return EOF, nil
-	}
-	t = r.tokens[0]
-	r.tokens = r.tokens[1:]
-	return
-}
-
-func collectTokens(r io.Reader) (tokens []Token, err error) {
-	var reader = bufio.NewReader(r)
-	var tok strings.Builder
+	var whitespace = []rune{' ', '\t', '\n', '\r'}
 
 	for {
-		var r, _, err = reader.ReadRune()
+		var c rune
+		c, _, err = r.reader.ReadRune()
 		if err != nil {
 			if err == io.EOF {
-				if tok.Len() > 0 {
-					tokens = append(tokens, Token(tok.String()))
-					tok.Reset()
+				if r.token.Len() > 0 {
+					t = r.popToken()
+					return t, nil
 				}
-				break
+				return EOF, nil
+			}
+			return
+		}
+
+		if slices.Contains(whitespace, c) {
+			if r.token.Len() > 0 {
+				t = r.popToken()
+				return
+			}
+			continue
+		}
+
+		if Token(c).IsSpecial() {
+			if r.token.Len() > 0 {
+				t = r.popToken()
+				r.token.WriteRune(c)
 			} else {
-				return nil, err
+				t = Token(c)
 			}
+			return
 		}
 
-		// whitespace ends any token that was being accumulated
-		if slices.Contains(whitespace, Token(r)) {
-			if tok.Len() > 0 {
-				tokens = append(tokens, Token(tok.String()))
-				tok.Reset()
-			}
-			continue
+		if Token(r.token.String()).IsSpecial() {
+			t = r.popToken()
+			r.token.WriteRune(c)
+			return
 		}
-
-		// check for special characters
-		if slices.Contains(special, Token(r)) {
-			if tok.Len() > 0 {
-				tokens = append(tokens, Token(tok.String()))
-				tok.Reset()
-			}
-			tok.WriteRune(r)
-			tokens = append(tokens, Token(tok.String()))
-			tok.Reset()
-			continue
-		}
-
-		// build normal token
-		tok.WriteRune(r)
+		r.token.WriteRune(c)
 	}
-
-	return
 }

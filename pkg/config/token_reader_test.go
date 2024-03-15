@@ -15,15 +15,15 @@ func TestTokenReader(t *testing.T) {
 	}
 	var tests = []testCase{
 		{
-			name:  "Literals",
+			name:  "literals",
 			input: "test case",
 			want:  []Token{"test", "case", EOF},
 		}, {
-			name:  "Special",
-			input: "test:{case }",
+			name:  "special",
+			input: "test:{case \t}",
 			want:  []Token{"test", ":", "{", "case", "}", EOF},
 		}, {
-			name:  "Empty",
+			name:  "empty",
 			input: "",
 			want:  []Token{EOF},
 		},
