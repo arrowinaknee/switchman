@@ -26,6 +26,13 @@ func TestTokenReader(t *testing.T) {
 			name:  "empty",
 			input: "",
 			want:  []Token{EOF},
+		}, {
+			name: "comment",
+			input: `test {
+				case # test case
+				# comment {:}
+			}`,
+			want: []Token{"test", "{", "case", "}", EOF},
 		},
 	}
 	for _, tt := range tests {

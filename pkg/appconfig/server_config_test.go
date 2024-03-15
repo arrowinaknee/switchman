@@ -22,6 +22,7 @@ func TestParseServerConfig(t *testing.T) {
 			source: `
 			server {
 				locations {
+					# comment line
 					/test: files {
 						sources: /test/
 					}

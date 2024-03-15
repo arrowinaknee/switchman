@@ -82,6 +82,20 @@ func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 			return
 		}
 
+		if c == '#' {
+			// seek end of line
+			err = r.processComment()
+			if err != nil {
+				return
+			}
+			// return the token that was before the comment, otherwise continue
+			if r.token.Len() > 0 {
+				t, p = r.popToken()
+				return
+			}
+			continue
+		}
+
 		if slices.Contains(whitespace, c) {
 			if c == '\n' {
 				r.curPos.nextLine()
@@ -109,5 +123,23 @@ func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 			return
 		}
 		r.writeRune(c)
+	}
+}
+
+func (r *tokenReader) processComment() error {
+	for {
+		c, _, err := r.reader.ReadRune()
+		r.curPos.nextChar()
+		if err != nil {
+			// EOF will be processed in the next iteration, any other error means the parsing failed
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		if c == '\n' {
+			r.curPos.nextLine()
+			return nil
+		}
 	}
 }
