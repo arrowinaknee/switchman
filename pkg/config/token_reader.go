@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -82,13 +83,10 @@ func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 			return
 		}
 
-		if c == '#' {
-			// seek end of line
-			err = r.processComment()
-			if err != nil {
-				return
+		if slices.Contains(whitespace, c) {
+			if c == '\n' {
+				r.curPos.nextLine()
 			}
-			// return the token that was before the comment, otherwise continue
 			if r.token.Len() > 0 {
 				t, p = r.popToken()
 				return
@@ -96,10 +94,13 @@ func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 			continue
 		}
 
-		if slices.Contains(whitespace, c) {
-			if c == '\n' {
-				r.curPos.nextLine()
+		if c == '#' {
+			// seek end of line
+			err = r.processComment()
+			if err != nil {
+				return
 			}
+			// return the token that was before the comment, otherwise continue
 			if r.token.Len() > 0 {
 				t, p = r.popToken()
 				return
@@ -122,6 +123,21 @@ func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 			r.writeRune(c)
 			return
 		}
+		if c == '"' || c == '\'' {
+			if r.token.Len() > 0 {
+				c0 := r.token.String()[0]
+				if c == rune(c0) {
+					r.writeRune(c)
+					r.popToken()
+				}
+				err = fmt.Errorf("%d:%d: %s can only be at the start of a literal", r.curPos.Line, r.curPos.Col, string(c))
+				return
+			}
+			err = r.readString(c)
+			if err != nil {
+				return
+			}
+		}
 		r.writeRune(c)
 	}
 }
@@ -141,5 +157,26 @@ func (r *tokenReader) processComment() error {
 			r.curPos.nextLine()
 			return nil
 		}
+	}
+}
+
+func (r *tokenReader) readString(end rune) error {
+	for {
+		c, _, err := r.reader.ReadRune()
+		r.curPos.nextChar()
+		if err != nil {
+			if err == io.EOF {
+				err = fmt.Errorf("%d:%d: unexpected EOF, string literal not closed", r.curPos.Line, r.curPos.Col)
+			}
+			return err
+		}
+		if c == '\n' {
+			err = fmt.Errorf("%d:%d: unexpected newline, string literal not closed", r.curPos.Line, r.curPos.Col)
+			return err
+		}
+		if c == end {
+			return nil
+		}
+		r.token.WriteRune(c)
 	}
 }
