@@ -37,6 +37,9 @@ func TestToken_Unescaped(t *testing.T) {
 		{"not_quoted", "string", "string", false},
 		{"quoted", "'string'", "string", false},
 		{"not_terminated", "'string", "", true},
+		{"escaped", `'\'string\''`, "'string'", false},
+		{"escaped_end", `'string\'`, "", true},
+		{"unknown_escape", `'strin\g'`, "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

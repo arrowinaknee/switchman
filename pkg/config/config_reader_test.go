@@ -167,13 +167,16 @@ func TestReader_ReadString(t *testing.T) {
 		{"quotes_single", "'two words'", "two words", false},
 		{"quotes_double", `"two words"`, "two words", false},
 		{"not_terminated", "'string\n", "", true},
+		{"escaped", `'\'string\''`, "'string'", false},
+		{"unknown_escape", `strin\g`, "", true},
+		{"escaped_end", `'string\'`, "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := NewReader(strings.NewReader(tt.input))
 			got, err := r.ReadString()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Reader.ReadString() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Reader.ReadString(%s) error = %v, wantErr %v", tt.input, err, tt.wantErr)
 				return
 			}
 			if err != nil {

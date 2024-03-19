@@ -39,6 +39,7 @@ func TestTokenReader(t *testing.T) {
 				test'without_space'
 				'string with	spaces'
 				'string "quoted"'
+				'\'escaped\''
 				'special: {}'
 				'new
 				line`,
@@ -47,6 +48,7 @@ func TestTokenReader(t *testing.T) {
 				"test", "'without_space'",
 				"'string with	spaces'",
 				`'string "quoted"'`,
+				`'\'escaped\''`,
 				"'special: {}'",
 				"'new", "line",
 				EOF},

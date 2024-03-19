@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -86,6 +87,25 @@ func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 				}
 				return
 			}
+			return
+		}
+
+		if c == '\\' {
+			c, _, err = r.reader.ReadRune()
+			r.curPos.nextChar()
+			if err != nil {
+				if err == io.EOF {
+					err = fmt.Errorf("%d:%d: unfinished escape sequence at EOF", r.curPos.Line, r.curPos.Col)
+				}
+				return
+			}
+			if quote := r.firstChar(); quote == '"' || quote == '\'' {
+				if c == quote {
+					r.token.WriteString(fmt.Sprintf("\\%c", c))
+					continue
+				}
+			}
+			err = fmt.Errorf("%d:%d: \\%c is not a recognized escape sequence", r.curPos.Line, r.curPos.Col, c)
 			return
 		}
 

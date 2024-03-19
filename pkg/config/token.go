@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strings"
 )
 
 const EOF Token = ""
@@ -47,11 +48,22 @@ func (t Token) Unescaped() (Token, error) {
 	if len(t) > 0 {
 		// string in quotes
 		if quote := t[0]; quote == '"' || quote == '\'' {
-			if len(t) < 2 || t[len(t)-1] != quote {
+			// string is terminated and the closing quote is not escaped
+			if len(t) < 2 || t[len(t)-1] != quote || t[len(t)-2] == '\\' {
 				return EOF, fmt.Errorf("quoted string literal not terminated")
 			}
 			// remove quotes
 			t = t[1 : len(t)-1]
+			// unescape quotes
+			t = Token(strings.ReplaceAll(t.String(), fmt.Sprintf("\\%c", quote), string(quote)))
+		}
+	}
+	// error any other escapes
+	if i := strings.IndexByte(t.String(), '\\'); i != -1 {
+		if i < len(t)-1 {
+			return EOF, fmt.Errorf("%s is not a recognized escape sequence", t[i:i+2])
+		} else {
+			return EOF, fmt.Errorf("escape sequence incomplete")
 		}
 	}
 	return t, nil
