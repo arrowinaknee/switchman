@@ -33,6 +33,23 @@ func TestTokenReader(t *testing.T) {
 				# comment {:}
 			}`,
 			want: []Token{"test", "{", "case", "}", EOF},
+		}, {
+			name: "strings",
+			input: `test: "test" 'test'
+				test'without_space'
+				'string with	spaces'
+				'string "quoted"'
+				'special: {}'
+				'new
+				line`,
+			want: []Token{
+				"test", ":", `"test"`, "'test'",
+				"test", "'without_space'",
+				"'string with	spaces'",
+				`'string "quoted"'`,
+				"'special: {}'",
+				"'new", "line",
+				EOF},
 		},
 	}
 	for _, tt := range tests {

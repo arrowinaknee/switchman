@@ -2,7 +2,6 @@ package config
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -62,6 +61,13 @@ func (r *tokenReader) writeRune(c rune) {
 	r.token.WriteRune(c)
 }
 
+func (r *tokenReader) firstChar() rune {
+	if r.token.Len() == 0 {
+		return rune(0)
+	}
+	return rune(r.token.String()[0])
+}
+
 func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 	var whitespace = []rune{' ', '\t', '\n', '\r'}
 
@@ -81,6 +87,30 @@ func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 				return
 			}
 			return
+		}
+
+		if quote := r.firstChar(); quote == '"' || quote == '\'' {
+			if c == quote {
+				r.writeRune(c)
+				t, p = r.popToken()
+				return
+			}
+			// newlines can't be part of a string, but the error will be raised from token validation
+			if c == '\n' {
+				t, p = r.popToken()
+				return
+			}
+			r.writeRune(c)
+			continue
+		}
+		if c == '"' || c == '\'' {
+			if r.token.Len() > 0 {
+				t, p = r.popToken()
+				r.writeRune(c)
+				return
+			}
+			r.writeRune(c)
+			continue
 		}
 
 		if slices.Contains(whitespace, c) {
@@ -123,21 +153,6 @@ func (r *tokenReader) next() (t Token, p TokenPosition, err error) {
 			r.writeRune(c)
 			return
 		}
-		if c == '"' || c == '\'' {
-			if r.token.Len() > 0 {
-				c0 := r.token.String()[0]
-				if c == rune(c0) {
-					r.writeRune(c)
-					r.popToken()
-				}
-				err = fmt.Errorf("%d:%d: %s can only be at the start of a literal", r.curPos.Line, r.curPos.Col, string(c))
-				return
-			}
-			err = r.readString(c)
-			if err != nil {
-				return
-			}
-		}
 		r.writeRune(c)
 	}
 }
@@ -157,26 +172,5 @@ func (r *tokenReader) processComment() error {
 			r.curPos.nextLine()
 			return nil
 		}
-	}
-}
-
-func (r *tokenReader) readString(end rune) error {
-	for {
-		c, _, err := r.reader.ReadRune()
-		r.curPos.nextChar()
-		if err != nil {
-			if err == io.EOF {
-				err = fmt.Errorf("%d:%d: unexpected EOF, string literal not closed", r.curPos.Line, r.curPos.Col)
-			}
-			return err
-		}
-		if c == '\n' {
-			err = fmt.Errorf("%d:%d: unexpected newline, string literal not closed", r.curPos.Line, r.curPos.Col)
-			return err
-		}
-		if c == end {
-			return nil
-		}
-		r.token.WriteRune(c)
 	}
 }
