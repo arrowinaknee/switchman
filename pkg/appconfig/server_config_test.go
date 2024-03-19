@@ -24,16 +24,16 @@ func TestParseServerConfig(t *testing.T) {
 				locations {
 					# comment line
 					/test: files {
-						sources: /test/
+						sources: "E:/test website/"
 					}
-					/redirect: redirect {
+					"/redirect": redirect {
 						target: /test
 					}
 				}
 			}`,
 			result: &http.Server{
 				Endpoints: []http.Endpoint{
-					{Location: "/test", Function: &http.EndpointFiles{FileRoot: "/test/"}},
+					{Location: "/test", Function: &http.EndpointFiles{FileRoot: "E:/test website/"}},
 					{Location: "/redirect", Function: &http.EndpointRedirect{Target: "/test"}},
 				},
 			},
@@ -56,6 +56,14 @@ func TestParseServerConfig(t *testing.T) {
 				locations {
 					/test: files {
 						sources: 
+				}
+			}`,
+			wantErr: true,
+		}, {
+			name: "unexpected_string",
+			source: `
+			server {
+				"locations" {
 				}
 			}`,
 			wantErr: true,

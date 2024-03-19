@@ -42,28 +42,37 @@ func (r *Reader) ReadLiteral() (t Token, err error) {
 	}
 	if !t.IsLiteral() {
 		t = EOF
+		err = r.ErrUnexpectedToken("a valid literal")
+		return
+	}
+	return
+}
+
+func (r *Reader) ReadSeparator() error {
+	return r.ReadExact(":")
+}
+
+func (r *Reader) ReadName() (t Token, err error) {
+	t, err = r.ReadLiteral()
+	if err != nil {
+		return
+	}
+	if !t.IsName() {
 		err = r.ErrUnexpectedToken("a valid name")
 		return
 	}
 	return
 }
 
-// Check that there is a ":" and read next literal token
-func (r *Reader) ReadProperty() (t Token, err error) {
-	if err = r.ReadExact(":"); err != nil {
-		return
-	}
-	return r.ReadLiteral()
-}
-
-// Same as ReadProperty(), but gets the token string
-func (r *Reader) ReadPropertyName() (s string, err error) {
-	var t Token
-	t, err = r.ReadProperty()
+func (r *Reader) ReadString() (t Token, err error) {
+	t, err = r.ReadLiteral()
 	if err != nil {
 		return
 	}
-	s = t.String()
+	t, err = t.Unescaped()
+	if err != nil {
+		return
+	}
 	return
 }
 

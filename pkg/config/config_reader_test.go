@@ -89,7 +89,7 @@ func TestReader_ReadLiteral(t *testing.T) {
 			want:  "literal",
 		}, {
 			name:    "special",
-			input:   ": litera;",
+			input:   ": literal",
 			wantErr: true,
 		},
 	}
@@ -108,73 +108,79 @@ func TestReader_ReadLiteral(t *testing.T) {
 	}
 }
 
-func TestReader_ReadProperty(t *testing.T) {
+func TestReader_ReadSeparator(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"correct", ":", false},
+		{"incorrect", "}", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := NewReader(strings.NewReader(tt.input))
+			if err := r.ReadSeparator(); (err != nil) != tt.wantErr {
+				t.Errorf("Reader.ReadSeparator() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestReader_ReadName(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
 		want    Token
 		wantErr bool
 	}{
-		{
-			name:  "correct",
-			input: ": value",
-			want:  "value",
-		}, {
-			name:    "no_colon",
-			input:   " value",
-			wantErr: true,
-		}, {
-			name:    "no_value",
-			input:   ": }",
-			wantErr: true,
-		},
+		{"name", "camelCase_95", "camelCase_95", false},
+		{"string", "'string'", "", true},
+		{"special", "}", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := NewReader(strings.NewReader(tt.input))
-			got, err := r.ReadProperty()
+			got, err := r.ReadName()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Reader.ReadProperty() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Reader.ReadName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("Reader.ReadProperty() = %v, want %v", got, tt.want)
+			if err != nil {
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Reader.ReadName() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestReader_ReadPropertyName(t *testing.T) {
+func TestReader_ReadString(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    string
+		want    Token
 		wantErr bool
 	}{
-		{
-			name:  "correct",
-			input: ": value",
-			want:  "value",
-		}, {
-			name:    "no_colon",
-			input:   " value",
-			wantErr: true,
-		}, {
-			name:    "no_value",
-			input:   ": }",
-			wantErr: true,
-		},
+		{"open", "string another", "string", false},
+		{"quotes_single", "'two words'", "two words", false},
+		{"quotes_double", `"two words"`, "two words", false},
+		{"not_terminated", "'string\n", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := NewReader(strings.NewReader(tt.input))
-			got, err := r.ReadPropertyName()
+			got, err := r.ReadString()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Reader.ReadPropertyName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Reader.ReadString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("Reader.ReadPropertyName() = %v, want %v", got, tt.want)
+			if err != nil {
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Reader.ReadString() = %v, want %v", got, tt.want)
 			}
 		})
 	}

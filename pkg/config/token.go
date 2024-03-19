@@ -43,18 +43,16 @@ func (t Token) IsName() bool {
 	return name_regexp.MatchString(t.String())
 }
 
-func (t Token) Unescape() (s string, err error) {
-	s = t.String()
-	if len(s) > 0 {
+func (t Token) Unescaped() (Token, error) {
+	if len(t) > 0 {
 		// string in quotes
-		if quote := s[0]; quote == '"' || quote == '\'' {
-			if len(s) < 2 || s[len(s)-1] != quote {
-				err = fmt.Errorf("quoted string literal not terminated")
-				return
+		if quote := t[0]; quote == '"' || quote == '\'' {
+			if len(t) < 2 || t[len(t)-1] != quote {
+				return EOF, fmt.Errorf("quoted string literal not terminated")
 			}
 			// remove quotes
-			s = s[1 : len(s)-1]
+			t = t[1 : len(t)-1]
 		}
 	}
-	return
+	return t, nil
 }

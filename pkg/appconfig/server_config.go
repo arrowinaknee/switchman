@@ -54,10 +54,19 @@ func readLocations(conf *config.Reader) (locations []http.Endpoint, err error) {
 	err = conf.ReadStruct(func(conf *config.Reader, field config.Token) (err error) {
 		var endpoint http.Endpoint
 
-		endpoint.Location = field.String()
+		var t config.Token
+		t, err = field.Unescaped()
+		if err != nil {
+			return
+		}
+		endpoint.Location = t.String()
 
 		var ep_type config.Token
-		ep_type, err = conf.ReadProperty()
+		err = conf.ReadSeparator()
+		if err != nil {
+			return
+		}
+		ep_type, err = conf.ReadName()
 		if err != nil {
 			return
 		}
@@ -88,9 +97,22 @@ func readEpFiles(conf *config.Reader) (fun *http.EndpointFiles, err error) {
 	fun = &http.EndpointFiles{}
 
 	err = conf.ReadStruct(func(conf *config.Reader, field config.Token) (err error) {
+		err = conf.ReadSeparator()
+		if err != nil {
+			return
+		}
+		var t config.Token
 		switch field {
 		case "sources":
-			fun.FileRoot, err = conf.ReadPropertyName()
+			t, err = conf.ReadString()
+			if err != nil {
+				return
+			}
+			t, err = t.Unescaped()
+			if err != nil {
+				return err
+			}
+			fun.FileRoot = t.String()
 		default:
 			err = conf.ErrUnrecognized("files endpoint property")
 		}
@@ -106,9 +128,22 @@ func readEpRedirect(conf *config.Reader) (fun *http.EndpointRedirect, err error)
 	fun = &http.EndpointRedirect{}
 
 	err = conf.ReadStruct(func(conf *config.Reader, field config.Token) (err error) {
+		err = conf.ReadSeparator()
+		if err != nil {
+			return
+		}
+		var t config.Token
 		switch field {
 		case "target":
-			fun.Target, err = conf.ReadPropertyName()
+			t, err = conf.ReadString()
+			if err != nil {
+				return
+			}
+			t, err = t.Unescaped()
+			if err != nil {
+				return err
+			}
+			fun.Target = t.String()
 		default:
 			err = conf.ErrUnrecognized("redirect endpoint property")
 		}

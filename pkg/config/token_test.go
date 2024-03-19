@@ -27,11 +27,11 @@ func TestToken_IsName(t *testing.T) {
 	}
 }
 
-func TestToken_Unescape(t *testing.T) {
+func TestToken_Unescaped(t *testing.T) {
 	tests := []struct {
 		name    string
 		tok     Token
-		want    string
+		want    Token
 		wantErr bool
 	}{
 		{"not_quoted", "string", "string", false},
@@ -40,7 +40,7 @@ func TestToken_Unescape(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.tok.Unescape()
+			got, err := tt.tok.Unescaped()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Token.Unescape() error = %v, wantErr %v", err, tt.wantErr)
 				return
