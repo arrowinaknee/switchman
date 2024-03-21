@@ -293,3 +293,26 @@ func Test_readEpRedirect(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkParseServer(b *testing.B) {
+	input := `
+	server {
+		endpoints {
+			/test1: files {
+				sources: "E:/test website/"
+			}
+			/test2: files {
+				sources: tests/test
+			}
+			/redirect: redirect {
+				target: /test1
+			}
+		}
+	}`
+	for i := 0; i < b.N; i++ {
+		_, err := ParseServer(strings.NewReader(input))
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}
