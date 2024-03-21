@@ -33,8 +33,8 @@ func readServer(conf *config.Reader) (server *http.Server, err error) {
 
 	err = conf.ReadStruct(func(conf *config.Reader, field config.Token) (err error) {
 		switch field {
-		case "locations":
-			server.Endpoints, err = readLocations(conf)
+		case "endpoints":
+			server.Endpoints, err = readEndpoints(conf)
 		default:
 			err = conf.ErrUnrecognized("server property")
 		}
@@ -46,7 +46,7 @@ func readServer(conf *config.Reader) (server *http.Server, err error) {
 	return
 }
 
-func readLocations(conf *config.Reader) (locations []http.Endpoint, err error) {
+func readEndpoints(conf *config.Reader) (locations []http.Endpoint, err error) {
 	/*locations{
 		path: endpoint_type {...}
 		...: ...

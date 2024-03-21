@@ -21,7 +21,7 @@ func TestParseServerConfig(t *testing.T) {
 			name: "full_config",
 			source: `
 			server {
-				locations {
+				endpoints {
 					# comment line
 					/test: files {
 						sources: "E:/test website/"
@@ -42,7 +42,7 @@ func TestParseServerConfig(t *testing.T) {
 			name: "missing_parameter",
 			source: `
 			server {
-				locations {
+				endpoints {
 					/test: files {
 						sources: 
 					}
@@ -53,7 +53,7 @@ func TestParseServerConfig(t *testing.T) {
 			name: "missing_parenthesis",
 			source: `
 			server {
-				locations {
+				endpoints {
 					/test: files {
 						sources: 
 				}
@@ -63,7 +63,7 @@ func TestParseServerConfig(t *testing.T) {
 			name: "unexpected_string",
 			source: `
 			server {
-				"locations" {
+				"endpoints" {
 				}
 			}`,
 			wantErr: true,
