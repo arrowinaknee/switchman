@@ -118,6 +118,9 @@ func readEpFiles(conf *config.Reader) (fun *http.EndpointFiles, err error) {
 		}
 		return
 	})
+	if err != nil {
+		return nil, err
+	}
 	return
 }
 
