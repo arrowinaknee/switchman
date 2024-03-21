@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Noto+Sans+Display:ital,wght@0,100..900;1,100..900&display=swap');
+
+:root {
+	--font: 'Noto Sans Display', sans-serif;
+	--font-mono: "Fragment Mono", monospace;
+	font-size: 18px;
+	font-family: var(--font);
+	font-weight: 400;
+	padding: 0;
+	margin: 0;
+}
+
+p {
+	margin: 0;
+}
+
+html {
+	height: 100%;
+}
+
+body {
+	padding: 0;
+	margin: 0;
+	width: 100%;
+	height: 100%;
+}
+
+button {
+	font-family: var(--font);
+	font-size: 16px;
+	font-weight: 500;
+}
+
+.col {
+	display: flex;
+	flex-direction: column;
+}
+.row {
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+}
+.grow {
+	flex: 1 1 auto;
+}
+
+button.flat {
+	background-color: transparent;
+	border: none;
+	padding: 0.35rem 0.75rem;
+}
+button.flat:hover {
+	background-color: #8888;
+}
+
+#header {
+	background: rgb(146, 208, 255);
+}
+#header p {
+	margin: 0.5rem 1.5rem;
+	font-size: 1.5rem;
+	font-weight: 900;
+	color: rgb(52, 78, 109);
+}
+#main {
+	display: flex;
+	flex-direction: column;
+}
+#code {
+	width: 100%;
+	height: 100%;
+	resize: none;
+	box-sizing: border-box;
+	font-family: var(--font-mono);
+	font-weight: 400;
+	font-style: normal;
+	font-size: 16px;
+	border: none;
+}
+#code:focus-within {
+	border:none;
+}
+#bottom {
+	background: rgb(49, 63, 80);
+	justify-content: end;
+}
+
+#bottom button {
+	color: #ddeeffdb;
+}
+
+#apply {
+	background-color: #52b967;
+}
+#apply:hover {
+	background-color: #5cd073;
+}

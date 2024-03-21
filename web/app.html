@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Switchman settings</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body class="col">
+	<div id="header"><p>Switchman</p></div>
+	<div id="main" class="col grow">
+		<textarea id="code" class="grow" spellcheck="false">
+server {
+    locations {
+        /test1/: files {
+            sources: "E:/web test/1"
+        }
+        /test2/: files {
+            sources: "E:/web test/2"
+        }
+        /: redirect {
+            target: /test1
+        }
+    }
+}
+
+		</textarea>
+		<div id="bottom" class="row">
+			<button id="check" class="flat">Check</button>
+			<button id="apply" class="flat">Apply</button>
+		</div>
+</body>
+</html>
