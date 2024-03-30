@@ -1,29 +1,25 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 
-	"github.com/arrowinaknee/switchman/pkg/appconfig"
+	"github.com/arrowinaknee/switchman/pkg/runtime"
 )
 
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Missing config file argument")
 	}
-	var config_path = os.Args[1]
-	var config_file, err = os.Open(config_path)
-	defer config_file.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-	srv, err := appconfig.ParseServer(config_file)
-	if err != nil {
-		log.Fatal(err)
-	}
+	config_path := os.Args[1]
 
-	fmt.Println("Switchman web server starting up")
-	log.Fatal(http.ListenAndServe(":8080", srv))
+	runtime := runtime.New()
+	err := runtime.LoadServer(config_path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = runtime.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
