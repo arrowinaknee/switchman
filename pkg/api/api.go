@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/arrowinaknee/switchman/pkg/appconfig"
 	"github.com/arrowinaknee/switchman/pkg/runtime"
 	"github.com/rs/cors"
 )
@@ -26,6 +27,7 @@ func Start(runtime *runtime.Runtime, address string) {
 	handler := c.Handler(mux)
 
 	mux.HandleFunc("/config", api.handleConfig)
+	mux.HandleFunc("/verify", api.handleVerify)
 	go http.ListenAndServe(address, handler)
 }
 
@@ -47,6 +49,20 @@ func (api *Api) handleConfig(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "Error reading config file")
 			return
 		}
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (api *Api) handleVerify(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		_, err := appconfig.ParseServer(r.Body)
+		if err != nil {
+			fmt.Fprint(w, err.Error())
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}

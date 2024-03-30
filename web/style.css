@@ -96,3 +96,12 @@ button.flat:hover {
 #apply:hover {
 	background-color: #5cd073;
 }
+
+#status {
+	margin: auto 0.5rem;
+	color: #ddeeffdb;
+	font-weight: 600;
+}
+#status.error {
+	color: rgba(227, 45, 63, 0.865)
+}
