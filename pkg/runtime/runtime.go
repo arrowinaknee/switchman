@@ -39,11 +39,15 @@ func (r *Runtime) LoadServer(path string) error {
 	return nil
 }
 
-func (a *Runtime) Start() error {
-	fmt.Println("Switchman web server starting up")
-	return http.ListenAndServe(":8080", a)
+func (r *Runtime) GetConfigPath() string {
+	return r.configPath
 }
 
-func (a *Runtime) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.server.ServeHTTP(w, r)
+func (r *Runtime) Start() error {
+	fmt.Println("Switchman web server starting up")
+	return http.ListenAndServe(":8080", r)
+}
+
+func (r *Runtime) ServeHTTP(w http.ResponseWriter, rq *http.Request) {
+	r.server.ServeHTTP(w, rq)
 }

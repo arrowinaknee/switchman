@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/arrowinaknee/switchman/pkg/api"
 	"github.com/arrowinaknee/switchman/pkg/runtime"
 )
 
@@ -14,6 +15,9 @@ func main() {
 	config_path := os.Args[1]
 
 	runtime := runtime.New()
+
+	api.Start(runtime, ":3315")
+
 	err := runtime.LoadServer(config_path)
 	if err != nil {
 		log.Fatal(err)

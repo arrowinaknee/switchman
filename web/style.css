@@ -76,6 +76,7 @@ button.flat:hover {
 	font-style: normal;
 	font-size: 16px;
 	border: none;
+	tab-size: 4;
 }
 #code:focus-within {
 	border:none;
