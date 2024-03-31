@@ -39,6 +39,11 @@ func (r *Runtime) LoadServer(path string) error {
 	return nil
 }
 
+// Update app state to use new server. Does not change the source file
+func (r *Runtime) UpdateServer(s Server) {
+	r.server = s
+}
+
 func (r *Runtime) GetConfigPath() string {
 	return r.configPath
 }

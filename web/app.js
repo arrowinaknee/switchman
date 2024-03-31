@@ -5,6 +5,17 @@ const baseUrl = new URL(location.protocol + location.hostname + port)
 const code = document.getElementById("code")
 const statusText = document.getElementById("status")
 
+function StatusOK(text) {
+	statusText.innerHTML = text
+	if (statusText.classList.contains("error"))
+			statusText.classList.remove("error")
+}
+function StatusError(text) {
+	statusText.innerHTML = text
+	if (!statusText.classList.contains("error"))
+			statusText.classList.add("error")
+}
+
 async function fetchConfig() {
 	let url = new URL("/config", baseUrl)
 
@@ -25,7 +36,7 @@ async function verifyConfig(code) {
 	return status
 }
 
-async function pressVevify() {
+async function pressVerify() {
 	let result = await verifyConfig(code.value)
 	if (result == "") {
 		statusText.innerHTML = "Config is valid"
@@ -35,6 +46,26 @@ async function pressVevify() {
 		statusText.innerHTML = result
 		if (!statusText.classList.contains("error"))
 			statusText.classList.add("error")
+	}
+}
+
+async function updateConfig(code) {
+	let url = new URL("/config", baseUrl)
+
+	let response = await fetch(url, {
+		method: "post",
+		body: code
+	})
+	let status = await response.text()
+	return status
+}
+
+async function pressApply() {
+	let result = await updateConfig(code.value)
+	if (result == "") {
+		StatusOK("Config applied successfully")
+	} else {
+		StatusError(result)
 	}
 }
 
