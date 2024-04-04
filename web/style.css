@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Noto+Sans+Display:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Display:ital,wght@0,100..900;1,100..900&family=Reddit+Mono:wght@200..900&display=swap');
 
 :root {
 	--font: 'Noto Sans Display', sans-serif;
-	--font-mono: "Fragment Mono", monospace;
+	--font-mono: "Reddit Mono", monospace;
 	font-size: 18px;
 	font-family: var(--font);
 	font-weight: 400;
@@ -109,4 +109,5 @@ button.flat:hover {
 .CodeMirror {
 	width: 100%;
 	height: 100%;
+	font-family: var(--font-mono);
 }
