@@ -2,7 +2,14 @@ const port = ":3315"
 
 const baseUrl = new URL(location.protocol + location.hostname + port)
 
-const code = document.getElementById("code")
+const codeAttach = document.getElementById("code_hook")
+const code = CodeMirror(codeAttach, {
+	lineNumbers: true,
+	indentWithTabs: true,
+	mode: 'text/x-go',
+	theme: 'material-darker',
+	scrollbarStyle: "null",
+})
 const statusText = document.getElementById("status")
 
 function StatusOK(text) {
@@ -22,7 +29,7 @@ async function fetchConfig() {
 	let response = await fetch(url)
 	let source = await response.text()
 
-	code.value = source
+	code.setValue(source)
 }
 
 async function verifyConfig(code) {
@@ -37,7 +44,7 @@ async function verifyConfig(code) {
 }
 
 async function pressVerify() {
-	let result = await verifyConfig(code.value)
+	let result = await verifyConfig(code.getValue())
 	if (result == "") {
 		statusText.innerHTML = "Config is valid"
 		if (statusText.classList.contains("error"))
@@ -61,7 +68,7 @@ async function updateConfig(code) {
 }
 
 async function pressApply() {
-	let result = await updateConfig(code.value)
+	let result = await updateConfig(code.getValue())
 	if (result == "") {
 		StatusOK("Config applied successfully")
 	} else {
@@ -69,15 +76,4 @@ async function pressApply() {
 	}
 }
 
-async function init() {
-	await fetchConfig()
-
-	const editor = CodeMirror.fromTextArea(code, {
-		lineNumbers: true,
-		indentWithTabs: true,
-		mode: 'text/x-go',
-		theme: 'material-darker',
-	})
-}
-
-init()
+fetchConfig()
