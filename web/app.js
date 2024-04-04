@@ -69,4 +69,15 @@ async function pressApply() {
 	}
 }
 
-fetchConfig()
+async function init() {
+	await fetchConfig()
+
+	const editor = CodeMirror.fromTextArea(code, {
+		lineNumbers: true,
+		indentWithTabs: true,
+		mode: 'text/x-go',
+		theme: 'material-darker',
+	})
+}
+
+init()

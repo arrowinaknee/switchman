@@ -105,3 +105,8 @@ button.flat:hover {
 #status.error {
 	color: rgba(227, 45, 63, 0.865)
 }
+
+.CodeMirror {
+	width: 100%;
+	height: 100%;
+}
