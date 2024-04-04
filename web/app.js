@@ -6,9 +6,10 @@ const codeAttach = document.getElementById("code_hook")
 const code = CodeMirror(codeAttach, {
 	lineNumbers: true,
 	indentWithTabs: true,
-	mode: 'text/x-go',
+	mode: 'switchman',
 	theme: 'material-darker',
 	scrollbarStyle: "null",
+	autoIndent: false,
 })
 const statusText = document.getElementById("status")
 
