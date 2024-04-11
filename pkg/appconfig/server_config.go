@@ -112,7 +112,7 @@ func readEpFiles(conf *config.Reader) (fun *http.EndpointFiles, err error) {
 			if err != nil {
 				return err
 			}
-			fun.FileRoot = t.String()
+			fun.Source = t.String()
 		default:
 			err = conf.ErrUnrecognized("files endpoint property")
 		}
@@ -126,7 +126,7 @@ func readEpFiles(conf *config.Reader) (fun *http.EndpointFiles, err error) {
 
 func readEpRedirect(conf *config.Reader) (fun *http.EndpointRedirect, err error) {
 	/*redirect = {
-		target: path
+		url: path
 	}*/
 	fun = &http.EndpointRedirect{}
 
@@ -137,7 +137,7 @@ func readEpRedirect(conf *config.Reader) (fun *http.EndpointRedirect, err error)
 		}
 		var t config.Token
 		switch field {
-		case "target":
+		case "url":
 			t, err = conf.ReadString()
 			if err != nil {
 				return
@@ -146,7 +146,7 @@ func readEpRedirect(conf *config.Reader) (fun *http.EndpointRedirect, err error)
 			if err != nil {
 				return err
 			}
-			fun.Target = t.String()
+			fun.URL = t.String()
 		default:
 			err = conf.ErrUnrecognized("redirect endpoint property")
 		}

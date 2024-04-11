@@ -48,7 +48,7 @@ type EndpointFunction interface {
 
 // EndpointFiles is an endpoint function that serves files from local filesystem
 type EndpointFiles struct {
-	FileRoot string // Path to the directory that the files will be served from
+	Source string // Path to the directory that the files will be served from
 }
 
 func (f *EndpointFiles) Serve(w http.ResponseWriter, r *http.Request, localPath string) {
@@ -63,7 +63,7 @@ func (f *EndpointFiles) Serve(w http.ResponseWriter, r *http.Request, localPath 
 	}
 
 	// join will remove all excess separators
-	var fpath = filepath.Join(f.FileRoot, localPath)
+	var fpath = filepath.Join(f.Source, localPath)
 	var file, err = os.OpenFile(fpath, os.O_RDONLY, 0)
 	if err != nil {
 		respondWith404(w, r)
@@ -77,9 +77,9 @@ func (f *EndpointFiles) Serve(w http.ResponseWriter, r *http.Request, localPath 
 
 // EndpointRedirect is an endpoint function that sends a redirect response
 type EndpointRedirect struct {
-	Target string
+	URL string
 }
 
 func (f *EndpointRedirect) Serve(w http.ResponseWriter, r *http.Request, localPath string) {
-	http.Redirect(w, r, f.Target, http.StatusMovedPermanently)
+	http.Redirect(w, r, f.URL, http.StatusMovedPermanently)
 }

@@ -28,14 +28,14 @@ func TestParseServer(t *testing.T) {
 						sources: "E:/test website/"
 					}
 					"/redirect": redirect {
-						target: /test
+						url: /test
 					}
 				}
 			}`,
 			result: &http.Server{
 				Endpoints: []http.Endpoint{
-					{Location: "/test", Function: &http.EndpointFiles{FileRoot: "E:/test website/"}},
-					{Location: "/redirect", Function: &http.EndpointRedirect{Target: "/test"}},
+					{Location: "/test", Function: &http.EndpointFiles{Source: "E:/test website/"}},
+					{Location: "/redirect", Function: &http.EndpointRedirect{URL: "/test"}},
 				},
 			},
 			wantErr: false,
@@ -149,19 +149,19 @@ func Test_readEndpoints(t *testing.T) {
 					sources: "E:/files/"
 				}
 				/redirect: redirect {
-					target: example.com/redirect
+					url: example.com/redirect
 				}
 			}`,
 			want: []http.Endpoint{
 				{
 					Location: "/files",
 					Function: &http.EndpointFiles{
-						FileRoot: "E:/files/",
+						Source: "E:/files/",
 					},
 				}, {
 					Location: "/redirect",
 					Function: &http.EndpointRedirect{
-						Target: "example.com/redirect",
+						URL: "example.com/redirect",
 					},
 				},
 			},
@@ -217,7 +217,7 @@ func Test_readEpFiles(t *testing.T) {
 				sources: "E:/test/"
 			}`,
 			want: &http.EndpointFiles{
-				FileRoot: "E:/test/",
+				Source: "E:/test/",
 			},
 			wantErr: false,
 		}, {
@@ -259,10 +259,10 @@ func Test_readEpRedirect(t *testing.T) {
 		{
 			name: "full",
 			input: `{
-				target: /
+				url: /
 			}`,
 			want: &http.EndpointRedirect{
-				Target: "/",
+				URL: "/",
 			},
 			wantErr: false,
 		}, {
