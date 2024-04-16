@@ -2,8 +2,10 @@ package http
 
 import (
 	"io"
+	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -82,4 +84,53 @@ type EndpointRedirect struct {
 
 func (f *EndpointRedirect) Serve(w http.ResponseWriter, r *http.Request, localPath string) {
 	http.Redirect(w, r, f.URL, http.StatusMovedPermanently)
+}
+
+type EndpointProxy struct {
+	Proto string
+	Host  string
+	Port  string
+	Path  string
+}
+
+func (f *EndpointProxy) Serve(w http.ResponseWriter, r *http.Request, localPath string) {
+	client := &http.Client{}
+
+	r.RequestURI = ""
+
+	path, err := url.JoinPath(f.Path, localPath)
+	if err != nil {
+		log.Printf("EndpointProxy.Serve: error joining path: %v", err)
+		respondWithError(w, r)
+		return
+	}
+	r.URL = &url.URL{
+		Scheme:   f.Proto,
+		User:     r.URL.User,
+		Host:     f.Host,
+		Path:     path,
+		RawQuery: r.URL.RawQuery,
+		Fragment: r.URL.Fragment,
+	}
+	log.Printf("Proxy request to url '%s'", r.URL.String())
+
+	resp, err := client.Do(r)
+	if err != nil {
+		log.Printf("EndpointProxy.Serve: error connecting to remote: %v", err)
+		respondWithError(w, r)
+		return
+	}
+	defer resp.Body.Close()
+
+	head := w.Header()
+	for k, vs := range resp.Header {
+		for _, v := range vs {
+			head.Add(k, v)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	_, err = io.Copy(w, resp.Body)
+	if err != nil {
+		log.Printf("EndpointProxy.Serve: error in proxy transfer: %v", err)
+	}
 }

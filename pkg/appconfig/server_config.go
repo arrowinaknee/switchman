@@ -75,6 +75,8 @@ func readEndpoints(conf *config.Reader) (locations []http.Endpoint, err error) {
 			endpoint.Function, err = readEpFiles(conf)
 		case "redirect":
 			endpoint.Function, err = readEpRedirect(conf)
+		case "proxy":
+			endpoint.Function, err = readEpProxy(conf)
 		default:
 			return conf.ErrUnrecognized("endpoint type")
 		}
@@ -125,7 +127,7 @@ func readEpFiles(conf *config.Reader) (fun *http.EndpointFiles, err error) {
 }
 
 func readEpRedirect(conf *config.Reader) (fun *http.EndpointRedirect, err error) {
-	/*redirect = {
+	/*redirect {
 		url: path
 	}*/
 	fun = &http.EndpointRedirect{}
@@ -149,6 +151,70 @@ func readEpRedirect(conf *config.Reader) (fun *http.EndpointRedirect, err error)
 			fun.URL = t.String()
 		default:
 			err = conf.ErrUnrecognized("redirect endpoint property")
+		}
+		return
+	})
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
+func readEpProxy(conf *config.Reader) (fun *http.EndpointProxy, err error) {
+	/*proxy {
+		TODO: url field with all following
+		proto: http
+		host: "example.com:8080"
+		path: /hello
+	}*/
+	fun = &http.EndpointProxy{
+		Proto: "http",
+		Host:  "localhost:80",
+		Path:  "/",
+	}
+
+	err = conf.ReadStruct(func(conf *config.Reader, field config.Token) (err error) {
+		err = conf.ReadSeparator()
+		if err != nil {
+			return
+		}
+		var t config.Token
+		switch field {
+		case "proto":
+			t, err = conf.ReadString()
+			if err != nil {
+				return
+			}
+			t, err = t.Unescaped()
+			if err != nil {
+				return err
+			}
+			if t.String() != "http" {
+				return conf.ErrInvalid("proxy protocol")
+			}
+			fun.Proto = t.String()
+		case "host":
+			t, err = conf.ReadString()
+			if err != nil {
+				return
+			}
+			t, err = t.Unescaped()
+			if err != nil {
+				return err
+			}
+			fun.Host = t.String()
+		case "path":
+			t, err = conf.ReadString()
+			if err != nil {
+				return
+			}
+			t, err = t.Unescaped()
+			if err != nil {
+				return err
+			}
+			fun.Path = t.String()
+		default:
+			err = conf.ErrUnrecognized("proxy endpoint property")
 		}
 		return
 	})

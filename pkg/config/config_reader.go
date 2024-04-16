@@ -114,3 +114,6 @@ func (r *Reader) ErrUnexpectedToken(expect string) error {
 func (r *Reader) ErrUnrecognized(exp string) error {
 	return fmt.Errorf("%d:%d: %s is not a recognized %s", r.tokenPos.Line, r.tokenPos.Col, r.curToken.Quote(), exp)
 }
+func (r *Reader) ErrInvalid(exp string) error {
+	return fmt.Errorf("%d:%d: %s is not a valid %s", r.tokenPos.Line, r.tokenPos.Col, r.curToken.Quote(), exp)
+}
