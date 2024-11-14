@@ -294,6 +294,138 @@ func Test_readEpRedirect(t *testing.T) {
 	}
 }
 
+func Test_readEpProxy(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    *http.EndpointProxy
+		wantErr bool
+	}{
+		{
+			name: "full",
+			input: `{
+				url: "http://example.com:8000/page"
+			}`,
+			want: &http.EndpointProxy{
+				Proto: "http",
+				Host:  "example.com:8000",
+				Path:  "/page",
+			},
+		}, {
+			name: "no_proto",
+			input: `{
+				url: "example.com:8000/page"
+			}`,
+			want: &http.EndpointProxy{
+				Proto: "http",
+				Host:  "example.com:8000",
+				Path:  "/page",
+			},
+		}, {
+			name: "host_only",
+			input: `{
+				url: "example.com"
+			}`,
+			want: &http.EndpointProxy{
+				Proto: "http",
+				Host:  "example.com:80",
+				Path:  "/",
+			},
+		}, {
+			name: "port_only",
+			input: `{
+				url: ":8080"
+			}`,
+			want: &http.EndpointProxy{
+				Proto: "http",
+				Host:  "localhost:8080",
+				Path:  "/",
+			},
+		}, {
+			name: "path_only",
+			input: `{
+				url: "/page"
+			}`,
+			want: &http.EndpointProxy{
+				Proto: "http",
+				Host:  "localhost:80",
+				Path:  "/page",
+			},
+		}, {
+			name: "path_trailing_slash",
+			input: `{
+				url: /page/
+			}`,
+			want: &http.EndpointProxy{
+				Proto: "http",
+				Host:  "localhost:80",
+				Path:  "/page/",
+			},
+		}, {
+			name: "proto_unsupported",
+			input: `{
+				url: "ftp://example.com"
+			}`,
+			wantErr: true,
+		}, {
+			name: "host_invalid_1",
+			input: `{
+				url: "example..com"
+			}`,
+			wantErr: true,
+		}, {
+			name: "host_invalid_2",
+			input: `{
+				url: "-example-.com"
+			}`,
+			wantErr: true,
+		}, {
+			name: "port_invalid",
+			input: `{
+				url: "example.com:78000"
+			}`,
+			wantErr: true,
+		}, {
+			name: "query_added",
+			input: `{
+				url: "example.com/page?query=1"
+			}`,
+			wantErr: true,
+		}, {
+			name: "fragment_added",
+			input: `{
+				url: "example.com/page#page"
+			}`,
+			wantErr: true,
+		}, {
+			name: "not_url",
+			input: `{
+				url: "some random text"
+			}`,
+			wantErr: true,
+		}, {
+			name: "empty",
+			input: `{
+				url: ""
+			}`,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := config.NewReader(strings.NewReader(tt.input))
+			got, err := readEpProxy(r)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("readEpProxy() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("readEpProxy() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func BenchmarkParseServer(b *testing.B) {
 	input := `
 	server {

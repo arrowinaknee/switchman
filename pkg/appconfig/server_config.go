@@ -1,11 +1,17 @@
 package appconfig
 
 import (
+	"fmt"
 	"io"
+	"regexp"
+	"strconv"
 
 	"github.com/arrowinaknee/switchman/pkg/config"
 	"github.com/arrowinaknee/switchman/pkg/servers/http"
 )
+
+var urlRegexp = regexp.MustCompile(`^(?:(?P<proto>[a-zA-Z0-9]+)://)?(?P<hostname>[0-9a-zA-Z\-\.]+)?(?P<port>:[0-9]+)?(?P<path>/[0-9a-zA-Z\-\._/%&]*)?(?P<query>\?.*)?(?P<fragment>#.*)?$`)
+var hostRegexp = regexp.MustCompile(`^(([a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9]|[a-zA-Z0-9])\.?)+$`)
 
 func ParseServer(source io.Reader) (*http.Server, error) {
 	return readConfig(config.NewReader(source))
@@ -162,10 +168,7 @@ func readEpRedirect(conf *config.Reader) (fun *http.EndpointRedirect, err error)
 
 func readEpProxy(conf *config.Reader) (fun *http.EndpointProxy, err error) {
 	/*proxy {
-		TODO: url field with all following
-		proto: http
-		host: "example.com:8080"
-		path: /hello
+		url: "http://example.com:8080/hello"
 	}*/
 	fun = &http.EndpointProxy{
 		Proto: "http",
@@ -180,7 +183,8 @@ func readEpProxy(conf *config.Reader) (fun *http.EndpointProxy, err error) {
 		}
 		var t config.Token
 		switch field {
-		case "proto":
+		case "url":
+			const url_err_text = "malformed or unsupported url"
 			t, err = conf.ReadString()
 			if err != nil {
 				return
@@ -189,30 +193,68 @@ func readEpProxy(conf *config.Reader) (fun *http.EndpointProxy, err error) {
 			if err != nil {
 				return err
 			}
-			if t.String() != "http" {
-				return conf.ErrInvalid("proxy protocol")
+			url := t.String()
+
+			if len(url) == 0 {
+				return conf.Errorf("%s, expected url format: [http://][hostname][:port][/path]", url_err_text)
 			}
-			fun.Proto = t.String()
-		case "host":
-			t, err = conf.ReadString()
-			if err != nil {
-				return
+			match := urlRegexp.FindStringSubmatch(url)
+			if len(match) == 0 {
+				return conf.Errorf("%s, expected url format: [http://][hostname][:port][/path]", url_err_text)
 			}
-			t, err = t.Unescaped()
-			if err != nil {
-				return err
+			result := make(map[string]string)
+			for i, name := range urlRegexp.SubexpNames() {
+				if i != 0 && name != "" {
+					result[name] = match[i]
+				}
 			}
-			fun.Host = t.String()
-		case "path":
-			t, err = conf.ReadString()
-			if err != nil {
-				return
+
+			proto := ""
+			host := ""
+			port := ""
+			path := ""
+
+			if proto = result["proto"]; proto != "" {
+				if proto != "http" {
+					return conf.Errorf("%s: %s protocol is not supported", url_err_text, proto)
+				}
+				fun.Proto = proto
 			}
-			t, err = t.Unescaped()
-			if err != nil {
-				return err
+			if host = result["hostname"]; host != "" {
+				if !hostRegexp.MatchString(host) {
+					return conf.Errorf("%s: invalid hostname %s", url_err_text, host)
+				}
 			}
-			fun.Path = t.String()
+			if port = result["port"]; port != "" {
+				portn, err := strconv.Atoi(port[1:])
+				if err != nil || portn > 65535 {
+					return fmt.Errorf("%s: port must be a number from 1 to 65535", url_err_text)
+				}
+			}
+			path = result["path"]
+
+			if query := result["query"]; query != "" {
+				return fmt.Errorf("%s: query is not allowed in proxy url", url_err_text)
+			}
+			if fragment := result["fragment"]; fragment != "" {
+				return fmt.Errorf("%s: fragment is not allowed in proxy url", url_err_text)
+			}
+
+			if proto != "" {
+				fun.Proto = proto
+			}
+			if host != "" || port != "" {
+				if host == "" {
+					host = "localhost"
+				}
+				if port == "" {
+					port = ":80"
+				}
+				fun.Host = host + port
+			}
+			if path != "" {
+				fun.Path = path
+			}
 		default:
 			err = conf.ErrUnrecognized("proxy endpoint property")
 		}

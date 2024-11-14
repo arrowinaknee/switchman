@@ -108,12 +108,15 @@ func (r *Reader) ReadStruct(parseField func(tokens *Reader, field Token) error) 
 	return
 }
 
+func (r *Reader) Errorf(format string, a ...any) error {
+	return fmt.Errorf("%d:%d: %s", r.tokenPos.Line, r.tokenPos.Col, fmt.Sprintf(format, a...))
+}
 func (r *Reader) ErrUnexpectedToken(expect string) error {
-	return fmt.Errorf("%d:%d: %s was expected, got %s", r.tokenPos.Line, r.tokenPos.Col, expect, r.curToken.Quote())
+	return r.Errorf("%s was expected, got %s", expect, r.curToken.Quote())
 }
 func (r *Reader) ErrUnrecognized(exp string) error {
-	return fmt.Errorf("%d:%d: %s is not a recognized %s", r.tokenPos.Line, r.tokenPos.Col, r.curToken.Quote(), exp)
+	return fmt.Errorf("%s is not a recognized %s", r.curToken.Quote(), exp)
 }
 func (r *Reader) ErrInvalid(exp string) error {
-	return fmt.Errorf("%d:%d: %s is not a valid %s", r.tokenPos.Line, r.tokenPos.Col, r.curToken.Quote(), exp)
+	return fmt.Errorf("%s is not a valid %s", r.curToken.Quote(), exp)
 }

@@ -98,11 +98,14 @@ func (f *EndpointProxy) Serve(w http.ResponseWriter, r *http.Request, localPath 
 
 	r.RequestURI = ""
 
-	path, err := url.JoinPath(f.Path, localPath)
-	if err != nil {
-		log.Printf("EndpointProxy.Serve: error joining path: %v", err)
-		respondWithError(w, r)
-		return
+	// url.JoinPath removes the trailing slash if it was present
+	path := f.Path
+	if localPath != "" {
+		if path[len(path)-1] != '/' {
+			path = strings.Join([]string{path, localPath}, "/")
+		} else {
+			path = strings.Join([]string{path, localPath}, "")
+		}
 	}
 	r.URL = &url.URL{
 		Scheme:   f.Proto,
