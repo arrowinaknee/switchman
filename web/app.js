@@ -16,12 +16,12 @@ const statusText = document.getElementById("status")
 function StatusOK(text) {
 	statusText.innerHTML = text
 	if (statusText.classList.contains("error"))
-			statusText.classList.remove("error")
+		statusText.classList.remove("error")
 }
 function StatusError(text) {
 	statusText.innerHTML = text
 	if (!statusText.classList.contains("error"))
-			statusText.classList.add("error")
+		statusText.classList.add("error")
 }
 
 async function fetchConfig() {

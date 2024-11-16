@@ -23,6 +23,7 @@ body {
 	margin: 0;
 	width: 100%;
 	height: 100%;
+	background-color: #212121;
 }
 
 button {
@@ -64,7 +65,7 @@ button.flat:hover {
 	user-select: none;
 }
 #logo {
-	vertical-align:text-bottom;
+	vertical-align: text-bottom;
 	height: 1.5em;
 	margin-right: 0.5em;
 	filter: invert(71%) sepia(12%) saturate(1661%) hue-rotate(173deg) brightness(95%) contrast(94%);
@@ -86,7 +87,7 @@ button.flat:hover {
 	tab-size: 4;
 }
 #code:focus-within {
-	border:none;
+	border: none;
 }
 #bottom {
 	background: rgb(49, 63, 80);
