@@ -1,5 +1,7 @@
 ![Logo](assets/logo-padded.svg)
 
+![build status](https://github.com/arrowinaknee/switchman/actions/workflows/build.yml/badge.svg) ![tests status](https://github.com/arrowinaknee/switchman/actions/workflows/tests.yml/badge.svg)
+
 ## Overview
 
 Switchman is a simple web server designed for quick installation and usability, perfect for self-hosted projects and rapid iterative solutions. Key features include:
