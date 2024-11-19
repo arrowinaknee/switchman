@@ -1,6 +1,9 @@
-# Switchman
+![Logo](assets/logo-padded.svg)
+
+## Overview
 
 Switchman is a simple web server designed for quick installation and usability, perfect for self-hosted projects and rapid iterative solutions. Key features include:
+- ✨ __HTTP Capabilities__: Serve files, proxy requests to other services, and utilize URL wildcard matching for flexible routing.
 - 🛠️ __Custom Configuration Language__: Easily deploy and modify your web configurations with a language tailored to the server's specifics.
 - 🔁 __Live Configuration Updates__: Change your settings on the fly without needing to restart the server.
 - 🌐 __Web UI__: Manage your server through an intuitive UI that includes a code editor with syntax highlighting and validation.

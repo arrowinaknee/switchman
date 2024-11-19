@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="4049.8525"
+   height="512"
+   viewBox="0 0 4049.8525 512"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="logo-padded.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview12"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="0.13499939"
+     inkscape:cx="1525.9328"
+     inkscape:cy="840.74454"
+     inkscape:window-width="1920"
+     inkscape:window-height="1016"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5"
+     fit-margin-top="16"
+     fit-margin-bottom="16"
+     fit-margin-left="16"
+     fit-margin-right="1024" />
+  <defs
+     id="defs2" />
+  <g
+     id="layer1">
+    <circle
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:7.55906;stroke-linejoin:round"
+       id="path846"
+       cx="256"
+       cy="256"
+       r="240" />
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:32;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="circle1070"
+       cx="256"
+       cy="256"
+       r="211.3376" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:32;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1130"
+       width="82.314575"
+       height="376.60141"
+       x="214.7289"
+       y="93.145378" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:32.0001;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1446"
+       width="157.33287"
+       height="143.15977"
+       x="177.21974"
+       y="115.65863" />
+    <circle
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:31.9999;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path1474"
+       cx="255.70206"
+       cy="181.69437"
+       r="44.328648" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:32;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1952"
+       width="33.895142"
+       height="193.09962"
+       x="455.3736"
+       y="-71.646408"
+       transform="rotate(45)" />
+    <circle
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:32;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path2122"
+       cx="387.83121"
+       cy="280.65985"
+       r="37.230179" />
+  </g>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:400px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#000000;fill-opacity:1;stroke:#ffffff;stroke-width:40;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+     x="557.80566"
+     y="420.40918"
+     id="text5209"><tspan
+       sodipodi:role="line"
+       id="tspan5207"
+       x="557.80566"
+       y="420.40918">Switchman</tspan></text>
+</svg>
