@@ -1,0 +1,42 @@
+name: Test coverage
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  check-test-coverage:
+    name: Go test coverage check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+          go-version: '1.21.6'
+    
+    - name: generate test coverage
+      run: go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+  
+    - name: check test coverage
+      uses: vladopajic/go-test-coverage@v2
+      with:
+        profile: cover.out
+        local-prefix: github.com/arrowinaknee/switchman
+    
+        ## when token is not specified (value '') this feature is turned off
+        ## in this example badge is created and committed only for main branch
+        git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
+        ## name of branch where badges are stored
+        ## ideally this should be orphan branch (see below how to create this branch)
+        git-branch: test-coverage-files
+    - name: generate visual coverage report
+      run: go tool cover -html=cover.out -o=cover.html
+    ## TODO: upload to the branch with badges
+    - name: upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: Test coverage HTML report
+        path: cover.html
+        if-no-files-found: error

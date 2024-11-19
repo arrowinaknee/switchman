@@ -1,6 +1,6 @@
 ![Logo](assets/logo-padded.svg)
 
-![build status](https://github.com/arrowinaknee/switchman/actions/workflows/build.yml/badge.svg) ![tests status](https://github.com/arrowinaknee/switchman/actions/workflows/tests.yml/badge.svg)
+![build status](https://github.com/arrowinaknee/switchman/actions/workflows/build.yml/badge.svg) ![tests status](https://github.com/arrowinaknee/switchman/actions/workflows/tests.yml/badge.svg) ![coverage](https://raw.githubusercontent.com/arrowinaknee/switchman/test-coverage-files/.badges/main/coverage.svg)
 
 ## Overview
 
