@@ -1,6 +1,8 @@
 package users
 
 import (
+	"encoding/hex"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -62,19 +64,41 @@ func (m *UserManager) Reload() error {
 	return m.load()
 }
 
-func (m *UserManager) Add(login string, password string) *User {
+func (m *UserManager) Add(login string, password string) (*User, error) {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
 	// TODO: validate credentials
 
+	id, err := randomHexString()
+	if err != nil {
+		return nil, fmt.Errorf("new user id: %v", err)
+	}
+
+	salt, err := randomHexString()
+	if err != nil {
+		return nil, fmt.Errorf("new user salt: %v", err)
+	}
+
+	// FIXME: hashing
+	pwHash := password
+
+	u := User{
+		id:        id,
+		Login:     login,
+		Password:  pwHash,
+		Salt:      salt,
+		IsEnabled: true,
+	}
 }
 
 var random = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-func randomHexString() string {
+func randomHexString() (string, error) {
 	buf := make([]byte, 16)
-	if _, err := random.Read(); err != nil {
-
+	if _, err := random.Read(buf); err != nil {
+		return "", fmt.Errorf("generate hex string: %v", err)
 	}
+
+	return hex.EncodeToString(buf), nil
 }
