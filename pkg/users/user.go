@@ -70,24 +70,24 @@ func (m *UserManager) Create(login string, password string) (*User, error) {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
-	// TODO: validate credentials
+	// TODO: custom errors for input validation
+	if len(login) == 0 {
+		return nil, fmt.Errorf("create user: empty login")
+	}
+	if len(password) == 0 {
+		return nil, fmt.Errorf("create user: empty password")
+	}
 
 	var id string
 	for {
-		var err error
-		if id, err = randomHexString(); err != nil {
-			return nil, fmt.Errorf("new user id: %v", err)
-		}
+		id = randomHexString()
 		// make sure id does not repeat
 		if _, ok := m.data.Users[id]; !ok {
 			break
 		}
 	}
 
-	salt, err := randomHexString()
-	if err != nil {
-		return nil, fmt.Errorf("new user salt: %v", err)
-	}
+	salt := randomHexString()
 
 	// FIXME: hashing
 	pwHash := password
@@ -99,7 +99,7 @@ func (m *UserManager) Create(login string, password string) (*User, error) {
 		Salt:      salt,
 		IsEnabled: true,
 	}
-	if err = m.save(); err != nil {
+	if err := m.save(); err != nil {
 		return nil, fmt.Errorf("create user: %v", err)
 	}
 
@@ -108,11 +108,9 @@ func (m *UserManager) Create(login string, password string) (*User, error) {
 
 var random = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-func randomHexString() (string, error) {
+func randomHexString() string {
 	buf := make([]byte, 16)
-	if _, err := random.Read(buf); err != nil {
-		return "", fmt.Errorf("generate hex string: %v", err)
-	}
+	random.Read(buf) // random.Read() never returns errors
 
-	return hex.EncodeToString(buf), nil
+	return hex.EncodeToString(buf)
 }
