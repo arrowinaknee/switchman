@@ -1,6 +1,8 @@
 package users
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
@@ -20,7 +22,7 @@ type usersData struct {
 }
 
 type User struct {
-	id        string
+	Id        string `yaml:"-"`
 	Login     string `yaml:"login"`
 	Password  string `yaml:"password"`
 	Salt      string `yaml:"salt"`
@@ -37,26 +39,6 @@ func InitManger(configPath string) (*UserManager, error) {
 	}
 
 	return m, nil
-}
-
-func (m *UserManager) load() error {
-	d, err := m.store.loadData()
-	if err != nil {
-		return fmt.Errorf("load users config: %v", err)
-	}
-	m.data = *d
-
-	for id, u := range m.data.Users {
-		u.id = id
-	}
-
-	return nil
-}
-func (m *UserManager) save() error {
-	if err := m.store.saveData(&m.data); err != nil {
-		return fmt.Errorf("save users config: %v", err)
-	}
-	return nil
 }
 
 func (m *UserManager) Reload() error {
@@ -87,23 +69,59 @@ func (m *UserManager) Create(login string, password string) (*User, error) {
 		}
 	}
 
-	salt := randomHexString()
-
-	// FIXME: hashing
-	pwHash := password
-
-	m.data.Users[id] = &User{
-		id:        id,
+	u := &User{
+		Id:        id,
 		Login:     login,
-		Password:  pwHash,
-		Salt:      salt,
 		IsEnabled: true,
 	}
+	if err := u.setPassword(password); err != nil {
+		return nil, fmt.Errorf("create user: %v", err)
+	}
+
 	if err := m.save(); err != nil {
 		return nil, fmt.Errorf("create user: %v", err)
 	}
 
 	return m.data.Users[id], nil
+}
+
+func (m *UserManager) load() error {
+	d, err := m.store.loadData()
+	if err != nil {
+		return fmt.Errorf("load users config: %v", err)
+	}
+	m.data = *d
+
+	for id, u := range m.data.Users {
+		u.Id = id
+	}
+
+	return nil
+}
+func (m *UserManager) save() error {
+	if err := m.store.saveData(&m.data); err != nil {
+		return fmt.Errorf("save users config: %v", err)
+	}
+	return nil
+}
+
+// reset salt and store hashed password
+func (u *User) setPassword(password string) error {
+	if len(password) == 0 {
+		return fmt.Errorf("empty password")
+	}
+
+	u.Salt = randomHexString()
+	u.Password = getPasswordHash(password, u.Salt)
+
+	return nil
+}
+
+func getPasswordHash(password string, salt string) string {
+	input := password + salt
+	b := sha256.Sum256([]byte(input))
+	// use base64 to keep the size down with easy to handle plaintext
+	return base64.RawStdEncoding.EncodeToString(b[:])
 }
 
 var random = rand.New(rand.NewSource(time.Now().UnixNano()))
