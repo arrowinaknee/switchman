@@ -2,16 +2,21 @@ package users
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 )
 
+const minPasswordLen = 8
+
+var ErrorPasswordTooShort = fmt.Errorf("auth: password too short")
+
 type UserManager struct {
 	store store
 	data  usersData
-	mut   sync.Mutex
+	mut   sync.RWMutex
 }
 
 type usersData struct {
@@ -19,11 +24,11 @@ type usersData struct {
 	Users  map[string]*User `yaml:"users"`
 }
 
+// TODO: do not export
 type User struct {
 	Id        string `yaml:"-"`
 	Login     string `yaml:"login"`
 	Password  string `yaml:"password"`
-	Salt      string `yaml:"salt"`
 	IsEnabled bool   `yaml:"is_enabled"`
 }
 
@@ -31,7 +36,7 @@ func InitManger(configPath string) (*UserManager, error) {
 	m := &UserManager{
 		store: getFileStore(configPath),
 	}
-	err := m.load()
+	err := m.loadData()
 	if err != nil {
 		return nil, fmt.Errorf("init user manager: %v", err)
 	}
@@ -43,47 +48,91 @@ func (m *UserManager) Reload() error {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
-	return m.load()
+	return m.loadData()
 }
 
-func (m *UserManager) Create(login string, password string) (*User, error) {
-	m.mut.Lock()
-	defer m.mut.Unlock()
+func (m *UserManager) GetById(id string) *User {
+	m.mut.RLock()
+	defer m.mut.RUnlock()
 
-	// TODO: custom errors for input validation
-	if len(login) == 0 {
-		return nil, fmt.Errorf("create user: empty login")
-	}
-	if len(password) == 0 {
-		return nil, fmt.Errorf("create user: empty password")
-	}
+	return m.data.Users[id]
+}
 
-	var id string
-	for {
-		id = randomHexString()
-		// make sure id does not repeat
-		if _, ok := m.data.Users[id]; !ok {
-			break
+func (m *UserManager) findByLogin(login string) *User {
+	for _, u := range m.data.Users {
+		if u.Login == login {
+			return u
 		}
 	}
 
-	u := &User{
-		Id:        id,
-		Login:     login,
-		IsEnabled: true,
-	}
-	if err := u.setPassword(password); err != nil {
-		return nil, fmt.Errorf("create user: %v", err)
-	}
-
-	if err := m.save(); err != nil {
-		return nil, fmt.Errorf("create user: %v", err)
-	}
-
-	return m.data.Users[id], nil
+	return nil
 }
 
-func (m *UserManager) load() error {
+// Save stores user data and assigns new id to user if id is empty
+func (m *UserManager) Save(u *User) error {
+	m.mut.Lock()
+	defer m.mut.Unlock()
+
+	isNew := false
+	if u.Id == "" {
+		isNew = true
+		for {
+			id := randomHexString()
+			if _, ok := m.data.Users[id]; !ok {
+				u.Id = id
+				break
+			}
+		}
+	}
+
+	if u.Login == "" {
+		return fmt.Errorf("save user: empty login")
+	}
+	if lu := m.findByLogin(u.Login); lu != nil && (isNew || lu.Id != u.Id) {
+		return fmt.Errorf("save user: login already exists")
+	}
+	if err := verifyEncodedPassword(u.Password); err != nil {
+		return fmt.Errorf("save user: %w", err)
+	}
+
+	m.data.Users[u.Id] = u
+
+	err := m.saveData()
+	if err != nil {
+		return fmt.Errorf("save user: %w", err)
+	}
+
+	return nil
+}
+
+// NewEncodedPassword validates password and returns encoded password
+func (m *UserManager) NewEncodedPassword(password string) (string, error) {
+	if err := m.validatePassword(password); err != nil {
+		return "", err
+	}
+	return createEncodedPassword(password), nil
+}
+
+// ValidatePassword checks password and returns error reason for password invalidaty
+func (m *UserManager) ValidatePassword(password string) error {
+	return m.validatePassword(password)
+}
+
+// MatchPassword checks if password matches user encoded password
+func (u *User) MatchPassword(password string) bool {
+	err := checkPassword(u.Password, password)
+	if err == nil {
+		return true
+	}
+	// user has invadid encoded password
+	if !errors.Is(err, ErrPasswordMismatch) {
+		// TODO: write to log
+		fmt.Println("Error: check password - %v", err)
+	}
+	return false
+}
+
+func (m *UserManager) loadData() error {
 	d, err := m.store.loadData()
 	if err != nil {
 		return fmt.Errorf("load users config: %v", err)
@@ -96,22 +145,18 @@ func (m *UserManager) load() error {
 
 	return nil
 }
-func (m *UserManager) save() error {
+func (m *UserManager) saveData() error {
 	if err := m.store.saveData(&m.data); err != nil {
 		return fmt.Errorf("save users config: %v", err)
 	}
 	return nil
 }
 
-// reset salt and store hashed password
-func (u *User) setPassword(password string) error {
-	if len(password) == 0 {
-		return fmt.Errorf("empty password")
+// TODO: more rules and move to separate file
+func (m *UserManager) validatePassword(password string) error {
+	if len(password) < minPasswordLen {
+		return ErrorPasswordTooShort
 	}
-
-	u.Salt = randomHexString()
-	u.Password = getPasswordHash(password, u.Salt)
-
 	return nil
 }
 

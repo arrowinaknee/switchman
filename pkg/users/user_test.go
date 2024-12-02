@@ -41,7 +41,7 @@ func TestCreate(t *testing.T) {
 			users := &UserManager{
 				store: store,
 			}
-			_ = users.load()
+			_ = users.loadData()
 
 			u, err := users.Create(tt.creds.login, tt.creds.password)
 			if err != nil {
@@ -55,7 +55,7 @@ func TestCreate(t *testing.T) {
 			}
 
 			if u != nil {
-				if len(u.id) == 0 {
+				if len(u.Id) == 0 {
 					t.Errorf("empty User.id")
 				}
 				if u.Login != tt.creds.login {
@@ -69,7 +69,7 @@ func TestCreate(t *testing.T) {
 
 			wantUsers := cloneUsers(data.Users)
 			if u != nil {
-				wantUsers[u.id] = u
+				wantUsers[u.Id] = u
 			}
 			gotUsers := store.data.Users
 			if err = checkUsers(wantUsers, gotUsers); err != nil {
@@ -116,7 +116,7 @@ func makeUsers(creds []userCreds) (users map[string]*User) {
 		salt := randomHexString()
 
 		users[id] = &User{
-			id:        id,
+			Id:        id,
 			Login:     c.login,
 			Password:  c.password,
 			Salt:      salt,
