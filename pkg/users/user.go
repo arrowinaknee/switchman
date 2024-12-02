@@ -1,8 +1,6 @@
 package users
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
@@ -115,13 +113,6 @@ func (u *User) setPassword(password string) error {
 	u.Password = getPasswordHash(password, u.Salt)
 
 	return nil
-}
-
-func getPasswordHash(password string, salt string) string {
-	input := password + salt
-	b := sha256.Sum256([]byte(input))
-	// use base64 to keep the size down with easy to handle plaintext
-	return base64.RawStdEncoding.EncodeToString(b[:])
 }
 
 var random = rand.New(rand.NewSource(time.Now().UnixNano()))
