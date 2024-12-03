@@ -2,7 +2,6 @@ package users
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -11,7 +10,16 @@ import (
 
 const minPasswordLen = 8
 
-var ErrorPasswordTooShort = fmt.Errorf("auth: password too short")
+var (
+	ErrLoginExists   = fmt.Errorf("auth: login already exists")
+	ErrLoginEmpty    = fmt.Errorf("auth: login is empty")
+	ErrLoginNotFound = fmt.Errorf("auth: user login not found")
+
+	ErrPasswordTooShort = fmt.Errorf("auth: password too short")
+
+	ErrUserNotFound = fmt.Errorf("auth: user not found")
+	ErrUserDisabled = fmt.Errorf("auth: user is disabled")
+)
 
 type UserManager struct {
 	store store
@@ -21,11 +29,11 @@ type UserManager struct {
 
 type usersData struct {
 	JwtKey string           `yaml:"jwt_key"`
-	Users  map[string]*User `yaml:"users"`
+	Users  map[string]*user `yaml:"users"`
 }
 
 // TODO: do not export
-type User struct {
+type user struct {
 	Id        string `yaml:"-"`
 	Login     string `yaml:"login"`
 	Password  string `yaml:"password"`
@@ -51,85 +59,186 @@ func (m *UserManager) Reload() error {
 	return m.loadData()
 }
 
-func (m *UserManager) GetById(id string) *User {
-	m.mut.RLock()
-	defer m.mut.RUnlock()
-
-	return m.data.Users[id]
-}
-
-func (m *UserManager) findByLogin(login string) *User {
-	for _, u := range m.data.Users {
-		if u.Login == login {
-			return u
-		}
-	}
-
-	return nil
-}
-
-// Save stores user data and assigns new id to user if id is empty
-func (m *UserManager) Save(u *User) error {
+func (m *UserManager) Create(login, password string) (string, error) {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
-	isNew := false
-	if u.Id == "" {
-		isNew = true
-		for {
-			id := randomHexString()
-			if _, ok := m.data.Users[id]; !ok {
-				u.Id = id
-				break
-			}
+	if err := m.ValidateLogin(login); err != nil {
+		return "", err
+	}
+	if err := m.ValidatePassword(password); err != nil {
+		return "", err
+	}
+
+	var id string
+	for {
+		id = randomHexString()
+		if _, ok := m.data.Users[id]; !ok {
+			break
 		}
 	}
 
-	if u.Login == "" {
-		return fmt.Errorf("save user: empty login")
+	u := &user{
+		Id:        id,
+		Login:     login,
+		Password:  createEncodedPassword(password),
+		IsEnabled: true,
 	}
-	if lu := m.findByLogin(u.Login); lu != nil && (isNew || lu.Id != u.Id) {
-		return fmt.Errorf("save user: login already exists")
-	}
-	if err := verifyEncodedPassword(u.Password); err != nil {
-		return fmt.Errorf("save user: %w", err)
+	m.data.Users[id] = u
+
+	if err := m.saveData(); err != nil {
+		return "", fmt.Errorf("create user: %w", err)
 	}
 
-	m.data.Users[u.Id] = u
+	return id, nil
+}
 
-	err := m.saveData()
-	if err != nil {
-		return fmt.Errorf("save user: %w", err)
+func (m *UserManager) Delete(id string) error {
+	m.mut.Lock()
+	defer m.mut.Unlock()
+
+	if _, ok := m.data.Users[id]; !ok {
+		return ErrUserNotFound
+	}
+
+	delete(m.data.Users, id)
+
+	if err := m.saveData(); err != nil {
+		return fmt.Errorf("delete user: %w", err)
 	}
 
 	return nil
 }
 
-// NewEncodedPassword validates password and returns encoded password
-func (m *UserManager) NewEncodedPassword(password string) (string, error) {
-	if err := m.validatePassword(password); err != nil {
+func (m *UserManager) GetIdByLogin(login string) (string, error) {
+	m.mut.RLock()
+	defer m.mut.RUnlock()
+
+	u := m.findByLogin(login)
+	if u == nil {
+		return "", ErrLoginNotFound
+	}
+	return u.Id, nil
+}
+
+func (m *UserManager) GetUserLogin(id string) (string, error) {
+	m.mut.RLock()
+	defer m.mut.RUnlock()
+
+	u, ok := m.data.Users[id]
+	if !ok {
+		return "", ErrUserNotFound
+	}
+	return u.Login, nil
+}
+
+func (m *UserManager) GetUserEnabled(id string) (bool, error) {
+	m.mut.RLock()
+	defer m.mut.RUnlock()
+
+	u, ok := m.data.Users[id]
+	if !ok {
+		return false, ErrUserNotFound
+	}
+	return u.IsEnabled, nil
+}
+
+func (m *UserManager) SetUserPassword(id, password string) error {
+	m.mut.Lock()
+	defer m.mut.Unlock()
+
+	u, ok := m.data.Users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+
+	if err := m.ValidatePassword(password); err != nil {
+		return err
+	}
+
+	u.Password = createEncodedPassword(password)
+
+	if err := m.saveData(); err != nil {
+		return fmt.Errorf("set user password: %w", err)
+	}
+	return nil
+}
+
+func (m *UserManager) SetUserLogin(id, login string) error {
+	m.mut.Lock()
+	defer m.mut.Unlock()
+
+	u, ok := m.data.Users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+
+	if err := m.ValidateLogin(login); err != nil {
+		return err
+	}
+
+	u.Login = login
+
+	if err := m.saveData(); err != nil {
+		return fmt.Errorf("set user login: %w", err)
+	}
+	return nil
+}
+
+func (m *UserManager) SetUserEnabled(id string, enabled bool) error {
+	m.mut.Lock()
+	defer m.mut.Unlock()
+
+	u, ok := m.data.Users[id]
+	if !ok {
+		return ErrUserNotFound
+	}
+
+	u.IsEnabled = enabled
+
+	if err := m.saveData(); err != nil {
+		return fmt.Errorf("set user enabled: %w", err)
+	}
+	return nil
+}
+
+func (m *UserManager) TrySignIn(login, password string) (string, error) {
+	m.mut.RLock()
+	defer m.mut.RUnlock()
+
+	u := m.findByLogin(login)
+	if u == nil {
+		return "", ErrLoginNotFound
+	}
+
+	if !u.IsEnabled {
+		return "", ErrUserDisabled
+	}
+
+	if err := checkPassword(u.Password, password); err != nil {
 		return "", err
 	}
-	return createEncodedPassword(password), nil
+
+	return u.Id, nil
 }
 
-// ValidatePassword checks password and returns error reason for password invalidaty
+func (m *UserManager) ValidateLogin(login string) error {
+	// TODO: do not allow spaces and special chars
+	if login == "" {
+		return ErrLoginEmpty
+	}
+	if lu := m.findByLogin(login); lu != nil {
+		return ErrLoginExists
+	}
+	return nil
+}
+
 func (m *UserManager) ValidatePassword(password string) error {
-	return m.validatePassword(password)
-}
-
-// MatchPassword checks if password matches user encoded password
-func (u *User) MatchPassword(password string) bool {
-	err := checkPassword(u.Password, password)
-	if err == nil {
-		return true
+	// TODO: more rules
+	if len(password) < minPasswordLen {
+		return ErrPasswordTooShort
 	}
-	// user has invadid encoded password
-	if !errors.Is(err, ErrPasswordMismatch) {
-		// TODO: write to log
-		fmt.Println("Error: check password - %v", err)
-	}
-	return false
+	return nil
 }
 
 func (m *UserManager) loadData() error {
@@ -152,11 +261,13 @@ func (m *UserManager) saveData() error {
 	return nil
 }
 
-// TODO: more rules and move to separate file
-func (m *UserManager) validatePassword(password string) error {
-	if len(password) < minPasswordLen {
-		return ErrorPasswordTooShort
+func (m *UserManager) findByLogin(login string) *user {
+	for _, u := range m.data.Users {
+		if u.Login == login {
+			return u
+		}
 	}
+
 	return nil
 }
 

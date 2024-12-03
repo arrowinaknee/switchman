@@ -30,8 +30,8 @@ func TestCreate(t *testing.T) {
 			creds:   userCreds{"", "password"},
 			wantErr: true,
 		}, {
-			name:    "empty_password",
-			creds:   userCreds{"login", ""},
+			name:    "short_password",
+			creds:   userCreds{"login", "pass"},
 			wantErr: true,
 		},
 	}
@@ -43,35 +43,40 @@ func TestCreate(t *testing.T) {
 			}
 			_ = users.loadData()
 
-			u, err := users.Create(tt.creds.login, tt.creds.password)
+			id, err := users.Create(tt.creds.login, tt.creds.password)
+			userCreated := true
 			if err != nil {
 				if !tt.wantErr {
 					t.Errorf("userManager.Create() error: %v", err)
 				}
-				if u != nil {
-					t.Errorf("userManager.Create(): want nil user on error, got %v", u)
-					u = nil
-				}
+				userCreated = false
 			}
 
-			if u != nil {
-				if len(u.Id) == 0 {
-					t.Errorf("empty User.id")
+			if userCreated {
+				if len(id) == 0 {
+					t.Errorf("empty user id")
 				}
-				if u.Login != tt.creds.login {
-					t.Errorf("want login='%s', got '%s'", tt.creds.login, u.Login)
+				login, err := users.GetUserLogin(id)
+				if err != nil {
+					t.Errorf("userManager.GetUserLogin() error: %v", err)
 				}
-				// TODO: password
-				if len(u.Salt) == 0 {
-					t.Errorf("empty User.Salt")
+				if login != tt.creds.login {
+					t.Errorf("want login='%s', got '%s'", tt.creds.login, login)
+				}
+				credId, err := users.TrySignIn(tt.creds.login, tt.creds.password)
+				if err != nil {
+					t.Errorf("userManager.TrySignIn() error: %v", err)
+				}
+				if credId != id {
+					t.Errorf("want id='%s', got '%s'", id, credId)
 				}
 			}
 
 			wantUsers := cloneUsers(data.Users)
-			if u != nil {
-				wantUsers[u.Id] = u
-			}
 			gotUsers := store.data.Users
+			if userCreated {
+				wantUsers[id] = gotUsers[id]
+			}
 			if err = checkUsers(wantUsers, gotUsers); err != nil {
 				t.Errorf("user list is incorrect:\n%v", err)
 			}
@@ -103,8 +108,8 @@ type userCreds struct {
 	password string
 }
 
-func makeUsers(creds []userCreds) (users map[string]*User) {
-	users = make(map[string]*User, len(creds))
+func makeUsers(creds []userCreds) (users map[string]*user) {
+	users = make(map[string]*user, len(creds))
 	for _, c := range creds {
 		var id string
 		for {
@@ -113,29 +118,26 @@ func makeUsers(creds []userCreds) (users map[string]*User) {
 				break
 			}
 		}
-		salt := randomHexString()
 
-		users[id] = &User{
+		users[id] = &user{
 			Id:        id,
 			Login:     c.login,
-			Password:  c.password,
-			Salt:      salt,
+			Password:  createEncodedPassword(c.password),
 			IsEnabled: true,
 		}
 	}
 	return
 }
-func cloneUsers(in map[string]*User) (out map[string]*User) {
-	out = make(map[string]*User, len(in))
+func cloneUsers(in map[string]*user) (out map[string]*user) {
+	out = make(map[string]*user, len(in))
 	for i, u := range in {
-		out[i] = new(User)
+		out[i] = new(user)
 		*out[i] = *u
 	}
 	return
 }
-func checkUsers(want map[string]*User, got map[string]*User) (err error) {
+func checkUsers(want map[string]*user, got map[string]*user) (err error) {
 	// could use reflect.DeepEqual at top level, but per element comparison is more informative
-
 	for id, wantU := range want {
 		gotU, ok := got[id]
 		if !ok {
