@@ -32,7 +32,6 @@ type usersData struct {
 	Users  map[string]*user `yaml:"users"`
 }
 
-// TODO: do not export
 type user struct {
 	Id        string `yaml:"-"`
 	Login     string `yaml:"login"`
