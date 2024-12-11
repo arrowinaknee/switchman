@@ -8,52 +8,38 @@ import (
 	"github.com/mohae/deepcopy"
 )
 
-var ErrNotFound = fmt.Errorf("settings: section not found")
-
-// TODO: just use interface{}, get path from args
-// Section is a group of settings that can be loaded and saved separately from others
-type Section interface {
-	// Path returns full name of section in store
-	// Parts of path are separated by '.', and if the path begins with '.',
-	// the section will be stored in the main object
-	Path() string
-}
+var ErrNotFound = fmt.Errorf("settings: key not found")
 
 type Store interface {
-	Load(s Section) error
-	Save(s Section) error
+	Load(path string, s interface{}) error
+	Save(path string, s interface{}) error
 }
 
 type YamlStore struct {
 	Path string // path to directory with yaml files
-	Main string // name of main yaml file
 }
 
-func (y *YamlStore) Load(s Section) error {
+func (y *YamlStore) Load(path string, s interface{}) error {
 	panic("unimplemented")
 }
 
-func (y *YamlStore) Save(s Section) error {
+func (y *YamlStore) Save(path string, s interface{}) error {
 	panic("unimplemented")
 }
 
 type VirtualStore struct {
 	mut  sync.RWMutex
-	Data map[string]Section
+	Data map[string]interface{}
 }
 
-func (v *VirtualStore) Load(s Section) error {
+func (v *VirtualStore) Load(path string, s interface{}) error {
 	v.mut.RLock()
 	defer v.mut.RUnlock()
 
-	key := s.Path()
-	if key == "" {
-		return fmt.Errorf("settings: empty path")
-	}
 	if v.Data == nil {
 		return fmt.Errorf("settings: virtual data not provided")
 	}
-	if d, ok := v.Data[key]; ok {
+	if d, ok := v.Data[path]; ok {
 		if reflect.TypeOf(s) != reflect.TypeOf(d) {
 			return fmt.Errorf("settings: type mismatch: %T != %T", s, d)
 		}
@@ -61,27 +47,24 @@ func (v *VirtualStore) Load(s Section) error {
 		reflect.ValueOf(s).Elem().Set(reflect.ValueOf(c).Elem())
 		return nil
 	}
-	return errNotExist(key, nil)
+	return errNotExist(path, nil)
 }
 
-func (v *VirtualStore) Save(s Section) error {
+func (v *VirtualStore) Save(path string, s interface{}) error {
 	v.mut.Lock()
 	defer v.mut.Unlock()
 
-	key := s.Path()
-	if key == "" {
-		return fmt.Errorf("settings: empty path")
-	}
 	if v.Data == nil {
-		v.Data = make(map[string]Section)
+		v.Data = make(map[string]interface{})
 	}
-	v.Data[key] = s
+	v.Data[path] = s
 	return nil
 }
 
-func errNotExist(s string, err error) error {
+// add erronous key to ErrNotFound, can also attach e.g. an os error
+func errNotExist(key string, err error) error {
 	if err != nil {
-		return fmt.Errorf("%w: %s: %w", ErrNotFound, s, err)
+		return fmt.Errorf("%w: %s: %w", ErrNotFound, key, err)
 	}
-	return fmt.Errorf("%w: %s", ErrNotFound, s)
+	return fmt.Errorf("%w: %s", ErrNotFound, key)
 }
