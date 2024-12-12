@@ -1,4 +1,4 @@
-package users
+package auth
 
 type store interface {
 	loadData() (*usersData, error)
