@@ -6,7 +6,11 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/arrowinaknee/switchman/pkg/settings"
 )
+
+const usersPath = "users"
 
 const minPasswordLen = 8
 
@@ -22,14 +26,9 @@ var (
 )
 
 type UserManager struct {
-	store store
-	data  usersData
+	store settings.Store
+	users map[string]*user
 	mut   sync.RWMutex
-}
-
-type usersData struct {
-	JwtKey string           `yaml:"jwt_key"`
-	Users  map[string]*user `yaml:"users"`
 }
 
 type user struct {
@@ -39,9 +38,9 @@ type user struct {
 	IsEnabled bool   `yaml:"is_enabled"`
 }
 
-func InitManger(configPath string) (*UserManager, error) {
+func NewUserManager(store settings.Store) (*UserManager, error) {
 	m := &UserManager{
-		store: getFileStore(configPath),
+		store: store,
 	}
 	err := m.loadData()
 	if err != nil {
@@ -72,7 +71,7 @@ func (m *UserManager) Create(login, password string) (string, error) {
 	var id string
 	for {
 		id = randomHexString()
-		if _, ok := m.data.Users[id]; !ok {
+		if _, ok := m.users[id]; !ok {
 			break
 		}
 	}
@@ -83,7 +82,7 @@ func (m *UserManager) Create(login, password string) (string, error) {
 		Password:  createEncodedPassword(password),
 		IsEnabled: true,
 	}
-	m.data.Users[id] = u
+	m.users[id] = u
 
 	if err := m.saveData(); err != nil {
 		return "", fmt.Errorf("create user: %w", err)
@@ -96,11 +95,11 @@ func (m *UserManager) Delete(id string) error {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
-	if _, ok := m.data.Users[id]; !ok {
+	if _, ok := m.users[id]; !ok {
 		return ErrUserNotFound
 	}
 
-	delete(m.data.Users, id)
+	delete(m.users, id)
 
 	if err := m.saveData(); err != nil {
 		return fmt.Errorf("delete user: %w", err)
@@ -124,7 +123,7 @@ func (m *UserManager) GetUserLogin(id string) (string, error) {
 	m.mut.RLock()
 	defer m.mut.RUnlock()
 
-	u, ok := m.data.Users[id]
+	u, ok := m.users[id]
 	if !ok {
 		return "", ErrUserNotFound
 	}
@@ -135,7 +134,7 @@ func (m *UserManager) GetUserEnabled(id string) (bool, error) {
 	m.mut.RLock()
 	defer m.mut.RUnlock()
 
-	u, ok := m.data.Users[id]
+	u, ok := m.users[id]
 	if !ok {
 		return false, ErrUserNotFound
 	}
@@ -146,7 +145,7 @@ func (m *UserManager) SetUserPassword(id, password string) error {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
-	u, ok := m.data.Users[id]
+	u, ok := m.users[id]
 	if !ok {
 		return ErrUserNotFound
 	}
@@ -167,7 +166,7 @@ func (m *UserManager) SetUserLogin(id, login string) error {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
-	u, ok := m.data.Users[id]
+	u, ok := m.users[id]
 	if !ok {
 		return ErrUserNotFound
 	}
@@ -188,7 +187,7 @@ func (m *UserManager) SetUserEnabled(id string, enabled bool) error {
 	m.mut.Lock()
 	defer m.mut.Unlock()
 
-	u, ok := m.data.Users[id]
+	u, ok := m.users[id]
 	if !ok {
 		return ErrUserNotFound
 	}
@@ -241,27 +240,30 @@ func (m *UserManager) ValidatePassword(password string) error {
 }
 
 func (m *UserManager) loadData() error {
-	d, err := m.store.loadData()
+	var users = map[string]*user{}
+	err := m.store.Load(usersPath, &users)
 	if err != nil {
-		return fmt.Errorf("load users config: %v", err)
+		return fmt.Errorf("load users list: %w", err)
 	}
-	m.data = *d
 
-	for id, u := range m.data.Users {
+	// TODO: data validation since users can be edited manually
+	for id, u := range users {
 		u.Id = id
 	}
+
+	m.users = users
 
 	return nil
 }
 func (m *UserManager) saveData() error {
-	if err := m.store.saveData(&m.data); err != nil {
-		return fmt.Errorf("save users config: %v", err)
+	if err := m.store.Save(usersPath, &m.users); err != nil {
+		return fmt.Errorf("save users list: %w", err)
 	}
 	return nil
 }
 
 func (m *UserManager) findByLogin(login string) *user {
-	for _, u := range m.data.Users {
+	for _, u := range m.users {
 		if u.Login == login {
 			return u
 		}

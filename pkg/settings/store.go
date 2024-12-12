@@ -40,6 +40,7 @@ func (v *VirtualStore) Load(path string, s interface{}) error {
 		return fmt.Errorf("settings: virtual data not provided")
 	}
 	if d, ok := v.Data[path]; ok {
+		// TODO: allow loading value to a pointer
 		if reflect.TypeOf(s) != reflect.TypeOf(d) {
 			return fmt.Errorf("settings: type mismatch: %T != %T", s, d)
 		}

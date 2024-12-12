@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/arrowinaknee/switchman/pkg/settings"
 )
 
 var existingCreds = userCreds{"user1", "mypass"}                // must be present in default data
@@ -12,13 +14,11 @@ var secondCreds = userCreds{"tester", "sTR0n9er"}               // must be prese
 var nonexistentCreds = userCreds{"nonexistent", "notapassword"} // must not be present in default data
 var nonexistentId = "nonexistent"                               // id is not validated, can be anything
 
-var data = usersData{
-	Users: makeUsers([]userCreds{
-		existingCreds,
-		secondCreds,
-		{"super", "abcdefg1"},
-	}),
-}
+var userList = makeUsers([]userCreds{
+	existingCreds,
+	secondCreds,
+	{"super", "abcdefg1"},
+})
 
 func TestCreate(t *testing.T) {
 	tests := []struct {
@@ -46,13 +46,8 @@ func TestCreate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// store never modifies initial data
-			store := &stubUserStore{data}
-			// TODO: more generic store, use normal constructor
-			users := &UserManager{
-				store: store,
-			}
-			_ = users.loadData()
+			store := stubUserStore(userList)
+			users, _ := NewUserManager(store)
 
 			id, err := users.Create(tt.creds.login, tt.creds.password)
 			userCreated := true
@@ -84,8 +79,8 @@ func TestCreate(t *testing.T) {
 				}
 			}
 
-			wantUsers := cloneUsers(data.Users)
-			gotUsers := store.data.Users
+			wantUsers := cloneUsers(userList)
+			gotUsers := getUsers(store)
 			if userCreated {
 				wantUsers[id] = gotUsers[id]
 			}
@@ -104,7 +99,7 @@ func TestDelete(t *testing.T) {
 	}{
 		{
 			name:    "normal",
-			id:      findId(data.Users, existingCreds.login),
+			id:      findId(userList, existingCreds.login),
 			wantErr: false,
 		}, {
 			name:    "empty_id",
@@ -118,19 +113,16 @@ func TestDelete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := &stubUserStore{data}
-			users := &UserManager{
-				store: store,
-			}
-			_ = users.loadData()
+			store := stubUserStore(userList)
+			users, _ := NewUserManager(store)
 
 			err := users.Delete(tt.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("userManager.Delete() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			wantUsers := cloneUsers(data.Users)
-			gotUsers := store.data.Users
+			wantUsers := cloneUsers(userList)
+			gotUsers := getUsers(store)
 			delete(wantUsers, tt.id)
 			if err = checkUsers(wantUsers, gotUsers); err != nil {
 				t.Errorf("user list is incorrect:\n%v", err)
@@ -149,7 +141,7 @@ func TestGetIdByLogin(t *testing.T) {
 		{
 			name:    "normal",
 			login:   existingCreds.login,
-			wantId:  findId(data.Users, existingCreds.login),
+			wantId:  findId(userList, existingCreds.login),
 			wantErr: false,
 		}, {
 			name:    "empty_login",
@@ -163,11 +155,8 @@ func TestGetIdByLogin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := &stubUserStore{data}
-			users := &UserManager{
-				store: store,
-			}
-			_ = users.loadData()
+			store := stubUserStore(userList)
+			users, _ := NewUserManager(store)
 
 			id, err := users.GetIdByLogin(tt.login)
 			if (err != nil) != tt.wantErr {
@@ -189,12 +178,12 @@ func TestSetUserPassword(t *testing.T) {
 	}{
 		{
 			name:    "normal",
-			id:      findId(data.Users, existingCreds.login),
+			id:      findId(userList, existingCreds.login),
 			newPass: "newPassword",
 			wantErr: false,
 		}, {
 			name:    "invalid_password",
-			id:      findId(data.Users, existingCreds.login),
+			id:      findId(userList, existingCreds.login),
 			newPass: "short",
 			wantErr: true,
 		}, {
@@ -209,11 +198,8 @@ func TestSetUserPassword(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := &stubUserStore{data}
-			users := &UserManager{
-				store: store,
-			}
-			_ = users.loadData()
+			store := stubUserStore(userList)
+			users, _ := NewUserManager(store)
 
 			err := users.SetUserPassword(tt.id, tt.newPass)
 			if (err != nil) != tt.wantErr {
@@ -224,7 +210,7 @@ func TestSetUserPassword(t *testing.T) {
 				return
 			}
 
-			login := store.data.Users[tt.id].Login
+			login := getUsers(store)[tt.id].Login
 			lid, err := users.TrySignIn(login, tt.newPass)
 			if err != nil {
 				t.Errorf("userManager.TrySignIn() error = %v", err)
@@ -245,17 +231,17 @@ func TestSetUserLogin(t *testing.T) {
 	}{
 		{
 			name:     "normal",
-			id:       findId(data.Users, existingCreds.login),
+			id:       findId(userList, existingCreds.login),
 			newLogin: "newLogin",
 			wantErr:  false,
 		}, {
 			name:     "invalid_login",
-			id:       findId(data.Users, existingCreds.login),
+			id:       findId(userList, existingCreds.login),
 			newLogin: "",
 			wantErr:  true,
 		}, {
 			name:     "duplicate_login",
-			id:       findId(data.Users, existingCreds.login),
+			id:       findId(userList, existingCreds.login),
 			newLogin: secondCreds.login,
 			wantErr:  true,
 		}, {
@@ -270,11 +256,8 @@ func TestSetUserLogin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := &stubUserStore{data}
-			users := &UserManager{
-				store: store,
-			}
-			_ = users.loadData()
+			store := stubUserStore(userList)
+			users, _ := NewUserManager(store)
 
 			err := users.SetUserLogin(tt.id, tt.newLogin)
 			if (err != nil) != tt.wantErr {
@@ -308,7 +291,7 @@ func TestTrySignIn(t *testing.T) {
 			name:     "normal",
 			login:    existingCreds.login,
 			password: existingCreds.password,
-			wantId:   findId(data.Users, existingCreds.login),
+			wantId:   findId(userList, existingCreds.login),
 			wantErr:  false,
 		}, {
 			name:     "wrong_password",
@@ -326,11 +309,8 @@ func TestTrySignIn(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := &stubUserStore{data}
-			users := &UserManager{
-				store: store,
-			}
-			_ = users.loadData()
+			store := stubUserStore(userList)
+			users, _ := NewUserManager(store)
 
 			id, err := users.TrySignIn(tt.login, tt.password)
 			if (err != nil) != tt.wantErr {
@@ -397,11 +377,8 @@ func TestValidateLogin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := &stubUserStore{data}
-			users := &UserManager{
-				store: store,
-			}
-			_ = users.loadData()
+			store := stubUserStore(userList)
+			users, _ := NewUserManager(store)
 			err := users.ValidateLogin(tt.login)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateLogin() error = %v, wantErr %v", err, tt.wantErr)
@@ -411,28 +388,21 @@ func TestValidateLogin(t *testing.T) {
 	}
 }
 
-type stubUserStore struct {
-	data usersData
-}
-
-func (s *stubUserStore) loadData() (*usersData, error) {
-	return &usersData{
-		JwtKey: s.data.JwtKey,
-		Users:  cloneUsers(s.data.Users),
-	}, nil
-}
-
-func (s *stubUserStore) saveData(d *usersData) error {
-	s.data = usersData{
-		JwtKey: d.JwtKey,
-		Users:  cloneUsers(d.Users),
-	}
-	return nil
-}
-
 type userCreds struct {
 	login    string
 	password string
+}
+
+func stubUserStore(users map[string]*user) *settings.VirtualStore {
+	return &settings.VirtualStore{
+		Data: map[string]interface{}{
+			usersPath: &users,
+		},
+	}
+}
+
+func getUsers(store *settings.VirtualStore) map[string]*user {
+	return *store.Data[usersPath].(*map[string]*user)
 }
 
 func makeUsers(creds []userCreds) (users map[string]*user) {
