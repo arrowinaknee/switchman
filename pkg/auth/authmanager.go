@@ -53,6 +53,10 @@ func (m *AuthManager) IssueToken(userId string) (string, error) {
 	m.mut.RLock()
 	defer m.mut.RUnlock()
 
+	if userId == "" {
+		return "", fmt.Errorf("issue token: empty user id")
+	}
+
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": userId,
 		"iss": "switchman",
@@ -81,6 +85,11 @@ func (m *AuthManager) ProcessToken(tokenString string) (userId string, err error
 	if !ok {
 		return "", fmt.Errorf("process token: invalid token")
 	}
+
+	if claims["iss"] != "switchman" {
+		return "", fmt.Errorf("process token: invalid issuer %q", claims["iss"])
+	}
+
 	userId = claims["sub"].(string)
 	return userId, nil
 }
