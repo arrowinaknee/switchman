@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -32,7 +34,11 @@ func NewManager(store settings.Store) (*AuthManager, error) {
 		Users: users,
 	}
 	// TODO: allow notFound, set defaults and generate secret
-	if err := m.loadSettings(); err != nil {
+	err = m.loadSettings()
+	if errors.Is(err, settings.ErrNotFound) {
+
+	}
+	if err != nil {
 		return nil, fmt.Errorf("auth: %w", err)
 	}
 
@@ -92,6 +98,11 @@ func (m *AuthManager) ProcessToken(tokenString string) (userId string, err error
 
 	userId = claims["sub"].(string)
 	return userId, nil
+}
+
+func (m *AuthManager) setup() error {
+	key := make([]byte, 32)
+	rand.Read(key)
 }
 
 func (m *AuthManager) loadSettings() error {
