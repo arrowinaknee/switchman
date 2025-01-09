@@ -33,10 +33,9 @@ func NewManager(store settings.Store) (*AuthManager, error) {
 		store: store,
 		Users: users,
 	}
-	// TODO: allow notFound, set defaults and generate secret
 	err = m.loadSettings()
 	if errors.Is(err, settings.ErrNotFound) {
-
+		err = m.setup()
 	}
 	if err != nil {
 		return nil, fmt.Errorf("auth: %w", err)
@@ -103,6 +102,10 @@ func (m *AuthManager) ProcessToken(tokenString string) (userId string, err error
 func (m *AuthManager) setup() error {
 	key := make([]byte, 32)
 	rand.Read(key)
+	m.settings = authSettings{
+		JwtSecret: key,
+	}
+	return m.saveSettings()
 }
 
 func (m *AuthManager) loadSettings() error {

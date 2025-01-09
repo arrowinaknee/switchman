@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -43,7 +44,7 @@ func NewUserManager(store settings.Store) (*UserManager, error) {
 		store: store,
 	}
 	err := m.loadData()
-	if err != nil {
+	if err != nil && !errors.Is(err, settings.ErrNotFound) {
 		return nil, fmt.Errorf("init user manager: %v", err)
 	}
 
