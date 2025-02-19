@@ -21,14 +21,18 @@ type Store interface {
 }
 
 type YamlStore struct {
-	Path string // path to directory with yaml files
-
+	Path    string // path to directory with yaml files
+	mapMu   sync.Mutex
+	fileMus map[string]*sync.Mutex
 }
 
 func (y *YamlStore) Load(path string, s interface{}) error {
-	// TODO: provide a file lock
 	names := strings.Split(path, ".")
 	fname := names[0] + ".yaml"
+
+	y.lockFile(fname)
+	defer y.unlockFile(fname)
+
 	bytes, err := os.ReadFile(filepath.Join(y.Path, fname))
 	if errors.Is(err, os.ErrNotExist) {
 		return errNotExist(path, err)
@@ -52,9 +56,12 @@ func (y *YamlStore) Load(path string, s interface{}) error {
 }
 
 func (y *YamlStore) Save(path string, s interface{}) error {
-	// TODO: provide a file lock
 	names := strings.Split(path, ".")
 	fname := names[0] + ".yaml"
+
+	y.lockFile(fname)
+	defer y.unlockFile(fname)
+
 	fullPath := filepath.Join(y.Path, fname)
 	bytes, err := os.ReadFile(fullPath)
 	var newRoot *yaml.Node
@@ -84,7 +91,27 @@ func (y *YamlStore) Save(path string, s interface{}) error {
 	}
 	// FIXME: perms
 	// TODO: wrap error
-	return os.WriteFile(fullPath, out, 0644)
+	return os.WriteFile(fullPath, out, 0666)
+}
+
+func (y *YamlStore) lockFile(file string) {
+	y.mapMu.Lock()
+	defer y.mapMu.Unlock()
+	if y.fileMus == nil {
+		y.fileMus = make(map[string]*sync.Mutex)
+	}
+	mu, ok := y.fileMus[file]
+	if !ok {
+		mu = &sync.Mutex{}
+		y.fileMus[file] = mu
+	}
+	mu.Lock()
+}
+
+func (y *YamlStore) unlockFile(file string) {
+	y.mapMu.Lock()
+	defer y.mapMu.Unlock()
+	y.fileMus[file].Unlock()
 }
 
 func findYamlNode(n *yaml.Node, names []string) (*yaml.Node, error) {
