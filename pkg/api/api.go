@@ -2,6 +2,8 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -9,17 +11,20 @@ import (
 	"os"
 
 	"github.com/arrowinaknee/switchman/pkg/appconfig"
+	"github.com/arrowinaknee/switchman/pkg/auth"
 	"github.com/arrowinaknee/switchman/pkg/runtime"
 	"github.com/rs/cors"
 )
 
 type Api struct {
 	runtime *runtime.Runtime
+	auth    *auth.AuthManager
 }
 
-func Start(runtime *runtime.Runtime, address string) {
+func Start(runtime *runtime.Runtime, auth *auth.AuthManager, address string) {
 	api := &Api{
 		runtime: runtime,
+		auth:    auth,
 	}
 	mux := http.NewServeMux()
 
@@ -29,6 +34,7 @@ func Start(runtime *runtime.Runtime, address string) {
 
 	mux.HandleFunc("/config", api.handleConfig)
 	mux.HandleFunc("/verify", api.handleVerify)
+	mux.HandleFunc("/login", api.handleLogin)
 	go http.ListenAndServe(address, handler)
 }
 
@@ -99,6 +105,85 @@ func (api *Api) handleVerify(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (api *Api) handleLogin(w http.ResponseWriter, r *http.Request) {
+	type LoginRequest struct {
+		Username string `json:"login"`
+		Password string `json:"password"`
+	}
+	switch r.Method {
+	case http.MethodPost:
+		var rd LoginRequest
+		err := json.NewDecoder(r.Body).Decode(&rd)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Unable to parse json: %s", err)
+			return
+		}
+		id, err := api.auth.Users.TrySignIn(rd.Username, rd.Password)
+		if errors.Is(err, auth.ErrLoginNotFound) || errors.Is(err, auth.ErrPasswordMismatch) {
+			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprint(w, "Incorrect login or password")
+			return
+		} else if errors.Is(err, auth.ErrUserDisabled) {
+			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprint(w, "User is disabled")
+			return
+		} else if err != nil {
+			// FIXME: needs to be logged
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			return
+		}
+		tok, err := api.auth.IssueToken(id)
+		if err != nil {
+			// FIXME: needs to be logged
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			return
+		}
+		// write cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:     "token",
+			Value:    tok,
+			SameSite: http.SameSiteStrictMode,
+		})
+		fmt.Fprint(w, "Authorized successfully")
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (api *Api) handleUsers(w http.ResponseWriter, r *http.Request) {
+	type user struct {
+		Id    string `json:"id"`
+		Login string `json:"login"`
+	}
+	switch r.Method {
+	case http.MethodGet:
+		ids := api.auth.Users.GetUsersIds()
+		users := make([]user, len(ids))
+		for i, id := range ids {
+			users[i].Id = id
+			var err error
+			users[i].Login, err = api.auth.Users.GetUserLogin(id)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "Internal server error")
+				return
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(users)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			return
+		}
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}

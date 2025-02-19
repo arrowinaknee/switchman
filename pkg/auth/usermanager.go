@@ -109,6 +109,17 @@ func (m *UserManager) Delete(id string) error {
 	return nil
 }
 
+func (m *UserManager) GetUsersIds() []string {
+	m.mut.RLock()
+	defer m.mut.RUnlock()
+
+	ids := make([]string, 0, len(m.users))
+	for id := range m.users {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 func (m *UserManager) GetIdByLogin(login string) (string, error) {
 	m.mut.RLock()
 	defer m.mut.RUnlock()
