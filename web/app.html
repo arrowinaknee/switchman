@@ -22,21 +22,91 @@
 	<script src="app.js" defer></script>
 </head>
 
-<body class="col">
-	<div id="header">
-		<p>
-			<img id="logo" src="img/icon-white.svg" draggable="false">
-			Switchman
-		</p>
-	</div>
-	<div id="main" class="col grow">
-		<div id="code_hook" class="grow"></div>
-		<!-- <textarea id="code" class="grow" spellcheck="false"></textarea> -->
-		<div id="bottom" class="row">
-			<p id="status" class="grow"></p>
-			<button id="check" class="flat" onclick="pressVerify()">Check</button>
-			<button id="apply" class="flat" onclick="pressApply()">Apply</button>
+<body class="row">
+	<div id="sidebar" class="col">
+		<div id="header">
+			<p>
+				<img id="logo" src="img/icon-white.svg" draggable="false">
+				Switchman
+			</p>
 		</div>
+		<div id="menu" class="col grow scroll">
+			<button class="menu-item" onclick="showPanel('panel-code')">
+				<p>Server</p>
+			</button>
+			<div class="menu-group col">
+				<button>
+					<p>Settings</p>
+				</button>
+
+				<button class="menu-item" onclick="showPanel('panel-users')">
+					<p>Users</p>
+				</button>
+				<button>
+					<p>API</p>
+				</button>
+			</div>
+		</div>
+	</div>
+	<div id="panel-mount" class="col grow">
+		<div id="panel-code" class="col grow active">
+			<div id="code-hook" class="grow"></div>
+			<!-- <textarea id="code" class="grow" spellcheck="false"></textarea> -->
+			<div id="code-bottom" class="row">
+				<p id="status" class="grow"></p>
+				<button id="check" class="flat" onclick="pressVerify()">Check</button>
+				<button id="apply" class="flat" onclick="pressApply()">Apply</button>
+			</div>
+		</div>
+		<div id="panel-users" class="col grow scroll panel active">
+			<table id="user-list">
+				<tr>
+					<td><h3 class="grow">Users</h3></td>
+					<td></td>
+					<td class="filled"><button class="accent">+ Add</button></td>
+				</tr>
+				<tr class="hover-bg">
+					<td>admin</td>
+					<td>Enabled</td>
+					<td class="phover row-button">Manage ></td>
+				</tr>
+				<tr class="hover-bg">
+					<td>user</td>
+					<td>Enabled</td>
+					<td class="phover row-button">Manage ></td>
+				</tr>
+			</table>
+		</div>
+		<div id="panel-newuser" class="col grow scroll panel active">
+			<table>
+				<tr>
+					<td><label for="newuser-login">Login</label></td>
+					<td><input id="newuser-login" type="text" placeholder="Login"></td>
+				</tr>
+				<tr>
+					<td><label for="newuser-password">Password</label></td>
+					<td><input id="newuser-password" type="password" placeholder="Password"></td>
+				</tr>
+				<tr>
+					<td><label for="newuser-password-confirm">Confirm password</label></td>
+					<td><input id="newuser-password-confirm" type="password" placeholder="Confirm password"></td>
+				</tr>
+				<tr>
+					<td colspan="2"><p id="newuser-status">awdawsdawsdawsdwasdwasdawsdawsdwsdaw</p></td>
+				</tr>
+				<tr>
+					<td colspan="2"><div class="row end"><button class="accent">Create</button></div></td>
+				</tr>
+			</table>
+		</div>
+	</div>
+	<!-- <div>
+		<label>Login</label>
+		<input id="login" type="text">
+		<label>Password</label>
+		<input id="password" type="password">
+		<button id="login_button" onclick="pressLogin()">Log in</button>
+	</div> -->
 </body>
 
 </html>

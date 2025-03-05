@@ -2,7 +2,7 @@ const port = ":3315"
 
 const baseUrl = new URL(location.protocol + location.hostname + port)
 
-const codeAttach = document.getElementById("code_hook")
+const codeAttach = document.getElementById("code-hook")
 const code = CodeMirror(codeAttach, {
 	lineNumbers: true,
 	indentWithTabs: true,
@@ -77,4 +77,39 @@ async function pressApply() {
 	}
 }
 
-fetchConfig()
+// async function pressLogin() {
+// 	let login = document.getElementById("login").value
+// 	let password = document.getElementById("password").value
+
+// 	let response = await fetch("/login", {
+// 		method: "post",
+// 		body: JSON.stringify({
+// 			"login": login,
+// 			"password": password
+// 		})
+// 	})
+// 	let status = await response.text()
+// 	console.log(status)
+// }
+
+function showPanel(id) {
+	let panels = Array.from(document.getElementById("panel-mount").children)
+	let active = panels.filter(p => p.classList.contains("active"))
+	console.log(active)
+	for (let p of active) {
+		p.classList.remove("active")
+	}
+	let panel = document.getElementById(id)
+	panel.classList.add("active")
+}
+
+function showPanelCode() {
+	showPanel("panel-code")
+	fetchConfig()
+}
+
+function showPanelUsers() {
+	showPanel("panel-users")
+}
+
+showPanel("panel-code")

@@ -3,33 +3,65 @@
 :root {
 	--font: 'Noto Sans Display', sans-serif;
 	--font-mono: "Reddit Mono", monospace;
-	font-size: 18px;
+	--font-normal: 18px;
+	--weight-normal: 400;
+
+	--color-text: white;
+	--color-accent: #92d0ff;
+	--color-accent-contrast: #344e6d;
+	--color-bg: #212121;
+	--color-bg-secondary: #282c32;
+	--color-bg-tr: #55728b22;
+
+	font-size: var(--font-normal);
 	font-family: var(--font);
-	font-weight: 400;
+	font-weight: var(--weight-normal);
 	padding: 0;
 	margin: 0;
 }
 
-p {
+p, h1, h2, h3, h4, h5, h6 {
 	margin: 0;
 }
 
-html {
+input {
+	font-family: var(--font);
+	font-size: var(--font-normal);
+	font-weight: var(--weight-normal);
+	color: var(--color-text);
+	background-color: var(--color-bg-secondary);
+	padding: 0.5rem 1rem;
+	border: none;
+	outline: none;
+}
+
+table {
+	border-collapse: collapse;
+}
+td, th {
+	white-space: nowrap;
+	padding: 0.5rem 1rem;
+	height: 100%;
+}
+td:nth-child(2) {
+	width: 100%;
+}
+td.filled {
+	padding: 0;
+}
+td.filled>* {
+	width: 100%;
 	height: 100%;
 }
 
 body {
+	height: 100vh;
+	width: 100vw;
+	display: flex;
+	flex-direction: column;
 	padding: 0;
 	margin: 0;
-	width: 100%;
-	height: 100%;
-	background-color: #212121;
-}
-
-button {
-	font-family: var(--font);
-	font-size: 16px;
-	font-weight: 500;
+	background-color: var(--color-bg);
 }
 
 .col {
@@ -42,27 +74,75 @@ button {
 	width: 100%;
 }
 .grow {
-	flex: 1 1 auto;
+	flex: 1 1;
+}
+
+.center {
+	justify-content: center;
+}
+.end {
+	justify-content: flex-end;
+}
+
+.col.scroll {
+	overflow-y: auto;
+}
+.row.scroll {
+	overflow-x: scroll;
+}
+
+button {
+	font-family: var(--font);
+	font-size: var(--font-normal);
+	font-weight: 500;
+	color: white;
+	background-color: var(--color-bg-tr);
+	border: none;
+	padding: 0.35rem 0.75rem;
+}
+button:hover {
+	background-color: color-mix(in lab, var(--color-bg-tr), white 10%);
 }
 
 button.flat {
 	background-color: transparent;
-	border: none;
-	padding: 0.35rem 0.75rem;
 }
 button.flat:hover {
-	background-color: #8888;
+	background-color: color-mix(in lab, var(--color-bg-tr), white 5%);
 }
+
+button.accent {
+	background-color: var(--color-accent);
+	color: var(--color-accent-contrast);
+}
+button.accent:hover {
+	background-color: color-mix(in lab, var(--color-accent), white 30%);
+}
+
+.hover-bg:hover {
+	background: var(--color-bg-tr);
+}
+
+.row-button {
+	background-color: color-mix(in lab, var(--color-bg-tr), white 10%);
+}
+
+:not(:hover)>.phover {
+	/* visibility: hidden; */
+	opacity: 0;
+}
+
 
 #header {
 	background: rgb(146, 208, 255);
 }
-#header p {
+#header>p {
 	margin: 0.5rem 1.5rem;
 	font-size: 1.5rem;
 	font-weight: 900;
 	color: rgb(52, 78, 109);
 	user-select: none;
+	text-wrap: none;
 }
 #logo {
 	vertical-align: text-bottom;
@@ -70,7 +150,7 @@ button.flat:hover {
 	margin-right: 0.5em;
 	filter: invert(71%) sepia(12%) saturate(1661%) hue-rotate(173deg) brightness(95%) contrast(94%);
 }
-#main {
+#panel-mount {
 	display: flex;
 	flex-direction: column;
 }
@@ -89,12 +169,13 @@ button.flat:hover {
 #code:focus-within {
 	border: none;
 }
-#bottom {
-	background: rgb(49, 63, 80);
+/*TODO: class*/
+#code-bottom {
+	background: var(--color-bg-secondary);
 	justify-content: end;
 }
 
-#bottom button {
+#code-bottom button {
 	color: #ddeeffdb;
 }
 
@@ -118,4 +199,39 @@ button.flat:hover {
 	width: 100%;
 	height: 100%;
 	font-family: var(--font-mono);
+}
+
+#menu {
+	background-color: rgb(40, 44, 50);
+}
+
+#menu button {
+	color: rgb(168, 180, 191);
+	text-align: left;
+	background-color: transparent;
+	border: none;
+	font-size: 1.2em;
+	font-weight: 500;
+	padding: 0.4em 1em;
+}
+
+#menu button:hover {
+	background-color: rgb(52, 57, 64);
+}
+
+#menu .menu-group button:first-child {
+	padding-bottom: 0.2em;
+}
+#menu .menu-group button:not(:first-child) {
+	padding: 0.2em 1em 0.2em 2em;
+}
+
+#panel-mount>:not(.active) {
+	display:none;
+}
+
+.panel {
+	color: white;
+	margin: 1rem auto;
+	min-width: 40em;
 }
