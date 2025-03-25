@@ -31,7 +31,7 @@
 			</p>
 		</div>
 		<div id="menu" class="col grow scroll">
-			<button class="menu-item" onclick="showPanel('panel-code')">
+			<button class="menu-item" onclick="showPanelCode()">
 				<p>Server</p>
 			</button>
 			<div class="menu-group col">
@@ -39,7 +39,7 @@
 					<p>Settings</p>
 				</button>
 
-				<button class="menu-item" onclick="showPanel('panel-users')">
+				<button class="menu-item" onclick="showPanelUsers()">
 					<p>Users</p>
 				</button>
 				<button>
@@ -60,10 +60,10 @@
 		</div>
 		<div id="panel-users" class="col grow scroll panel active">
 			<table id="user-list">
-				<tr>
+				<tr class="static">
 					<td><h3 class="grow">Users</h3></td>
 					<td></td>
-					<td class="filled"><button class="accent">+ Add</button></td>
+					<td class="filled"><button class="accent" onclick="showCreateUser()">+ Add</button></td>
 				</tr>
 				<tr class="hover-bg">
 					<td>admin</td>
@@ -95,7 +95,34 @@
 					<td colspan="2"><p id="newuser-status">awdawsdawsdawsdwasdwasdawsdawsdwsdaw</p></td>
 				</tr>
 				<tr>
-					<td colspan="2"><div class="row end"><button class="accent">Create</button></div></td>
+					<td colspan="2"><div class="row end"><button class="accent" onclick="userCreate()">Create</button></div></td>
+				</tr>
+			</table>
+		</div>
+		<div id="panel-user" class="panel">
+			<h4>Login details</h4>
+			<table>
+				<tr>
+					<td><label for="user-login">Login</label></td>
+					<td><input type="text" id="user-login" placeholder="New login" oninput="userLoginRefresh()"></td>
+					<td><p><!--Username already taken--></p></td>
+				</tr>
+				<tr>
+					<td colspan="2"></td>
+					<td><div class="row end"><button id="user-login-update">Update</button></td>
+				</tr>
+				<tr><td colspan="3"><hr></td></tr>
+				<tr>
+					<td><label for="user-password">Password</label></td>
+					<td><input type="password" id="user-password" placeholder="New password"></td>
+				</tr>
+				<tr>
+					<td><label for="user-password-confirm">Confirm password</label></td>
+					<td><input type="password" id="user-password-confirm" placeholder="Confirm password"></td>
+				</tr>
+				<tr>
+					<td colspan="2"></td>
+					<td><div class="row end" id="user-password-update"><button disabled>Update</button></div></td>
 				</tr>
 			</table>
 		</div>

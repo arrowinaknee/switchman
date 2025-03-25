@@ -83,6 +83,9 @@ func (m *UserManager) Create(login, password string) (string, error) {
 		Password:  createEncodedPassword(password),
 		IsEnabled: true,
 	}
+	if m.users == nil {
+		m.users = make(map[string]*user) // TODO: init on create?
+	}
 	m.users[id] = u
 
 	if err := m.saveData(); err != nil {

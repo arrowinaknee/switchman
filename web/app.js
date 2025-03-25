@@ -13,6 +13,8 @@ const code = CodeMirror(codeAttach, {
 })
 const statusText = document.getElementById("status")
 
+let edit_user = ""
+
 function StatusOK(text) {
 	statusText.innerHTML = text
 	if (statusText.classList.contains("error"))
@@ -31,6 +33,38 @@ async function fetchConfig() {
 	let source = await response.text()
 
 	code.setValue(source)
+}
+
+async function fetchUsers() {
+	let url = new URL("/users", baseUrl)
+
+	let response = await fetch(url)
+	let users = await response.json()
+	console.log(users)
+
+	let table = document.getElementById("user-list")
+	let tbody = table.tBodies[0]
+	for (let row of Array.from(tbody.children)) {
+		if (!row.classList.contains("static")) {
+			row.remove()
+		}
+	}
+
+	if (users.length == 0) {
+		let row = document.createElement("tr")
+		row.innerHTML = `<td colspan="3">No users found</td>`
+		tbody.appendChild(row)
+		return
+	}
+	for (let user of users) {
+		let row = document.createElement("tr")
+		row.innerHTML = `
+			<td>${user.login}</td>
+			<td>Enabled</td>
+			<td class="phover row-button">Manage ></td>`
+		row.onclick = () => showUser(user.login)
+		tbody.appendChild(row)
+	}
 }
 
 async function verifyConfig(code) {
@@ -77,6 +111,54 @@ async function pressApply() {
 	}
 }
 
+async function userCreate() {
+	let login = document.getElementById("newuser-login").value
+	let password = document.getElementById("newuser-password").value
+	let passwordConfirm = document.getElementById("newuser-password-confirm").value
+
+	if (password != passwordConfirm) {
+		return // TODO: show error
+	}
+
+	let user = {
+		"login": login,
+		"password": password,
+	}
+
+	let url = new URL("/users", baseUrl)
+
+	let response = await fetch(url, {
+		method: "post",
+		body: JSON.stringify(user)
+	})
+	if (response.status == 200) {
+		showPanelUsers()
+	}
+}
+
+function userLoginRefresh() {
+	let login = document.getElementById("user-login").value
+	console.log(login, edit_user)
+	let button = document.getElementById("user-login-update")
+	// console.log(button.disabled)
+	// button.disabled = (login == "" || login == edit_user) ? true : false
+	// console.log(button.disabled)
+	if (login == "" || login == edit_user) {
+		button.setAttribute("disabled", true)
+	} else {
+		button.removeAttribute("disabled")
+	}
+}
+
+function userPasswordRefresh() {
+	let password = document.getElementById("user-password").value
+	let passwordConfirm = document.getElementById("user-password-confirm").value
+	console.log(password, passwordConfirm)
+	let button = document.getElementById("user-password-update")
+	button.disabled = (password == "" || password != passwordConfirm) ? true : false
+}
+
+
 // async function pressLogin() {
 // 	let login = document.getElementById("login").value
 // 	let password = document.getElementById("password").value
@@ -95,7 +177,6 @@ async function pressApply() {
 function showPanel(id) {
 	let panels = Array.from(document.getElementById("panel-mount").children)
 	let active = panels.filter(p => p.classList.contains("active"))
-	console.log(active)
 	for (let p of active) {
 		p.classList.remove("active")
 	}
@@ -110,6 +191,21 @@ function showPanelCode() {
 
 function showPanelUsers() {
 	showPanel("panel-users")
+	fetchUsers()
 }
 
-showPanel("panel-code")
+function showCreateUser() {
+	showPanel("panel-newuser")
+	document.getElementById("newuser-login").value = ""
+	document.getElementById("newuser-password").value = ""
+	document.getElementById("newuser-password-confirm").value = ""
+}
+
+function showUser(login) {
+	edit_user = login
+	document.getElementById("user-login").value = login
+	showPanel("panel-user")
+	userLoginRefresh()
+}
+
+showPanelCode()

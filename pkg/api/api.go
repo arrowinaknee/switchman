@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/arrowinaknee/switchman/pkg/appconfig"
 	"github.com/arrowinaknee/switchman/pkg/auth"
@@ -35,6 +36,7 @@ func Start(runtime *runtime.Runtime, auth *auth.AuthManager, address string) {
 	mux.HandleFunc("/config", api.handleConfig)
 	mux.HandleFunc("/verify", api.handleVerify)
 	mux.HandleFunc("/login", api.handleLogin)
+	mux.HandleFunc("/users", api.handleUsers)
 	go http.ListenAndServe(address, handler)
 }
 
@@ -184,7 +186,69 @@ func (api *Api) handleUsers(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "Internal server error")
 			return
 		}
+	case http.MethodPost:
+		var u struct {
+			Login    string `json:"login"`
+			Password string `json:"password"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&u)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Unable to parse json: %s", err)
+			return
+		}
+		id, err := api.auth.Users.Create(u.Login, u.Password)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Failed to create user")
+		}
+		cr := &user{
+			Id:    id,
+			Login: u.Login,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(cr)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			return
+		}
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (api *Api) handleUserX(w http.ResponseWriter, r *http.Request) {
+	login := r.URL.Path[strings.LastIndexAny(r.URL.Path, "/"):]
+	if len(login) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "User login empty")
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		id, err := api.auth.Users.GetIdByLogin(login)
+		if errors.Is(err, auth.ErrLoginNotFound) {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "User does not exist")
+			return
+		}
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			fmt.Printf("Error looking up user id: %v\n", err)
+		}
+
+		resp := &struct {
+			Id string `json:"id"`
+		}{id}
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			fmt.Printf("Error encoding response: %v\n", err)
+		}
 	}
 }

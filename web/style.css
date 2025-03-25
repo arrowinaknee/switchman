@@ -100,8 +100,12 @@ button {
 	border: none;
 	padding: 0.35rem 0.75rem;
 }
-button:hover {
+button:not(:disabled):hover {
 	background-color: color-mix(in lab, var(--color-bg-tr), white 10%);
+}
+
+button:disabled {
+	color: grey;
 }
 
 button.flat {
