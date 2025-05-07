@@ -210,6 +210,22 @@ func (api *Api) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type createUser struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+}
+
+func (api *Api) ncreateUser(w *responseWriter, r *http.Request, user *createUser) {
+	_, err := api.auth.Users.Create(user.Login, user.Password)
+	if err != nil {
+		w.Error(http.StatusInternalServerError)
+		fmt.Printf("Error: coult not create user: %v", err)
+		return
+	}
+
+	w.Ok()
+}
+
 func (api *Api) getUser(w http.ResponseWriter, r *http.Request) {
 	login := r.PathValue("login")
 	if len(login) == 0 {
