@@ -32,20 +32,20 @@ func Start(runtime *runtime.Runtime, auth *auth.AuthManager, address string) {
 	c := cors.AllowAll()
 	handler := c.Handler(mux)
 
-	mux.HandleFunc("GET  /config", api.handleConfigGet)
-	mux.HandleFunc("POST /config", api.handleConfigPost)
-	mux.HandleFunc("POST /verify", api.handleVerify)
-	mux.HandleFunc("POST /login", api.handleLogin)
-	mux.HandleFunc("GET  /users", api.handleUsersGet)
-	mux.HandleFunc("POST /users", api.handleUsersPost)
-	mux.HandleFunc("GET  /users/{login}", api.handleUserXGet)
-	mux.HandleFunc("POST /users/{login}/login", api.handleUserLoginPost)
+	mux.HandleFunc("GET  /config", api.getConfig)
+	mux.HandleFunc("POST /config", api.saveConfig)
+	mux.HandleFunc("POST /verify", api.verifyConfig)
+	mux.HandleFunc("POST /login", api.login)
+	mux.HandleFunc("GET  /users", api.getUserList)
+	mux.HandleFunc("POST /users", api.createUser)
+	mux.HandleFunc("GET  /users/{login}", api.getUser)
+	mux.HandleFunc("POST /users/{login}/login", api.setUserLogin)
 
 	fmt.Printf("api: listening on %s\n", address)
 	go http.ListenAndServe(address, handler)
 }
 
-func (api *Api) handleConfigGet(w http.ResponseWriter, r *http.Request) {
+func (api *Api) getConfig(w http.ResponseWriter, r *http.Request) {
 	path := api.runtime.GetConfigPath()
 	file, err := os.Open(path)
 	if err != nil {
@@ -62,7 +62,7 @@ func (api *Api) handleConfigGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func (api *Api) handleConfigPost(w http.ResponseWriter, r *http.Request) {
+func (api *Api) saveConfig(w http.ResponseWriter, r *http.Request) {
 	path := api.runtime.GetConfigPath()
 	// body needs to be both parsed and saved to disk
 	body, err := io.ReadAll(r.Body)
@@ -99,7 +99,7 @@ func (api *Api) handleConfigPost(w http.ResponseWriter, r *http.Request) {
 	log.Printf("api: updated config file '%s'", path)
 }
 
-func (api *Api) handleVerify(w http.ResponseWriter, r *http.Request) {
+func (api *Api) verifyConfig(w http.ResponseWriter, r *http.Request) {
 	_, err := appconfig.ParseServer(r.Body)
 	if err != nil {
 		fmt.Fprint(w, err.Error())
@@ -108,7 +108,7 @@ func (api *Api) handleVerify(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (api *Api) handleLogin(w http.ResponseWriter, r *http.Request) {
+func (api *Api) login(w http.ResponseWriter, r *http.Request) {
 	type LoginRequest struct {
 		Username string `json:"login"`
 		Password string `json:"password"`
@@ -151,7 +151,7 @@ func (api *Api) handleLogin(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Authorized successfully")
 }
 
-func (api *Api) handleUsersGet(w http.ResponseWriter, r *http.Request) {
+func (api *Api) getUserList(w http.ResponseWriter, r *http.Request) {
 	type user struct {
 		Id    string `json:"id"`
 		Login string `json:"login"`
@@ -176,7 +176,8 @@ func (api *Api) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func (api *Api) handleUsersPost(w http.ResponseWriter, r *http.Request) {
+
+func (api *Api) createUser(w http.ResponseWriter, r *http.Request) {
 	type user struct {
 		Id    string `json:"id"`
 		Login string `json:"login"`
@@ -209,7 +210,7 @@ func (api *Api) handleUsersPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *Api) handleUserXGet(w http.ResponseWriter, r *http.Request) {
+func (api *Api) getUser(w http.ResponseWriter, r *http.Request) {
 	login := r.PathValue("login")
 	if len(login) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -241,7 +242,7 @@ func (api *Api) handleUserXGet(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *Api) handleUserLoginPost(w http.ResponseWriter, r *http.Request) {
+func (api *Api) setUserLogin(w http.ResponseWriter, r *http.Request) {
 	login := r.PathValue("login")
 
 	id, err := api.auth.Users.GetIdByLogin(login)
