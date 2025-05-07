@@ -62,6 +62,7 @@ async function fetchUsers() {
 			<td>${user.login}</td>
 			<td>Enabled</td>
 			<td class="phover row-button">Manage ></td>`
+		row.classList = "hover-bg clickable"
 		row.onclick = () => showUser(user.login)
 		tbody.appendChild(row)
 	}

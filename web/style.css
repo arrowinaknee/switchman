@@ -123,6 +123,10 @@ button.accent:hover {
 	background-color: color-mix(in lab, var(--color-accent), white 30%);
 }
 
+button:not(:disabled), .clickable {
+	cursor: pointer;
+}
+
 .hover-bg:hover {
 	background: var(--color-bg-tr);
 }
