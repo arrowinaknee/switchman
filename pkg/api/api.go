@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/arrowinaknee/switchman/pkg/appconfig"
 	"github.com/arrowinaknee/switchman/pkg/auth"
@@ -33,12 +32,14 @@ func Start(runtime *runtime.Runtime, auth *auth.AuthManager, address string) {
 	c := cors.AllowAll()
 	handler := c.Handler(mux)
 
-	mux.HandleFunc("GET /config", api.handleConfigGet)
+	mux.HandleFunc("GET  /config", api.handleConfigGet)
 	mux.HandleFunc("POST /config", api.handleConfigPost)
 	mux.HandleFunc("POST /verify", api.handleVerify)
 	mux.HandleFunc("POST /login", api.handleLogin)
-	mux.HandleFunc("GET /users", api.handleUsersGet)
+	mux.HandleFunc("GET  /users", api.handleUsersGet)
 	mux.HandleFunc("POST /users", api.handleUsersPost)
+	mux.HandleFunc("GET  /users/{login}", api.handleUserXGet)
+	mux.HandleFunc("POST /users/{login}/login", api.handleUserLoginPost)
 
 	fmt.Printf("api: listening on %s\n", address)
 	go http.ListenAndServe(address, handler)
@@ -208,37 +209,89 @@ func (api *Api) handleUsersPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *Api) handleUserX(w http.ResponseWriter, r *http.Request) {
-	login := r.URL.Path[strings.LastIndexAny(r.URL.Path, "/"):]
+func (api *Api) handleUserXGet(w http.ResponseWriter, r *http.Request) {
+	login := r.PathValue("login")
 	if len(login) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "User login empty")
 		return
 	}
 
-	switch r.Method {
-	case http.MethodGet:
-		id, err := api.auth.Users.GetIdByLogin(login)
-		if errors.Is(err, auth.ErrLoginNotFound) {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "User does not exist")
-			return
-		}
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "Internal server error")
-			fmt.Printf("Error looking up user id: %v\n", err)
-		}
+	id, err := api.auth.Users.GetIdByLogin(login)
+	if errors.Is(err, auth.ErrLoginNotFound) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "User does not exist")
+		return
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Internal server error")
+		fmt.Printf("Error looking up user id: %v\n", err)
+	}
 
-		resp := &struct {
-			Id string `json:"id"`
-		}{id}
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(resp)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "Internal server error")
-			fmt.Printf("Error encoding response: %v\n", err)
-		}
+	resp := &struct {
+		Id string `json:"id"`
+	}{id}
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Internal server error")
+		fmt.Printf("Error encoding response: %v\n", err)
+	}
+}
+
+func (api *Api) handleUserLoginPost(w http.ResponseWriter, r *http.Request) {
+	login := r.PathValue("login")
+
+	id, err := api.auth.Users.GetIdByLogin(login)
+	if errors.Is(err, auth.ErrLoginNotFound) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "User does not exist")
+		return
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Internal server error")
+		fmt.Printf("Error looking up user id: %v\n", err)
+	}
+
+	var rdata struct {
+		Login string `json:"login"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&rdata)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Could not decode request json")
+		return
+	}
+
+	err = api.auth.Users.SetUserLogin(id, rdata.Login)
+	if errors.Is(err, auth.ErrLoginEmpty) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Invalid login")
+		return
+	}
+	if errors.Is(err, auth.ErrLoginExists) {
+		w.WriteHeader(http.StatusConflict)
+		fmt.Fprintf(w, "Login already taken")
+		return
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Could not update login")
+		fmt.Printf("Error")
+		return
+	}
+
+	resp := &struct {
+		Id string `json:"id"`
+	}{id}
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Internal server error")
+		fmt.Printf("Error encoding response: %v\n", err)
 	}
 }

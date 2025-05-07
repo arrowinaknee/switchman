@@ -209,4 +209,20 @@ function showUser(login) {
 	userLoginRefresh()
 }
 
+async function setLogin() {
+	let input = document.getElementById("user-login")
+	let login = input.value
+	let request = {
+		login: login
+	}
+	let url = new URL("/users/" + edit_user + "/login", baseUrl)
+	console.log(url)
+	let resp = await fetch(url, {
+		method: "post",
+		body: JSON.stringify(request)
+	})
+	if (resp.ok)
+		showUser(login)
+}
+
 showPanelCode()
